@@ -57,7 +57,7 @@ function Shell() {
 
       {sources.map(g => (
         <div key={g.group}>
-          <div className="sec calm">{g.group}</div>
+          <div className="sec">{g.group}</div>
           <div className="grid">
             {g.items.map(s => (
               <div key={s.name + s.url} className="src">
