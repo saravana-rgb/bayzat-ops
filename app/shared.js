@@ -14,9 +14,17 @@ export const tiles = [
   {
     slug: 'onboarding',
     name: 'Onboarding tracker',
-    blurb: 'Every new joiner, the six IT steps they need, and what is overdue.',
+    blurb: 'Every new joiner and the six IT steps they are still waiting on.',
     href: '/onboarding',
     icon: '\u2713',
+    live: true
+  },
+  {
+    slug: 'sheets',
+    name: 'Onboarding sheets',
+    blurb: 'Every Google Sheet behind this flow, in one place.',
+    href: '/sheets',
+    icon: '\u25A6',
     live: true
   },
   {
@@ -29,27 +37,46 @@ export const tiles = [
   }
 ];
 
+/* ----------------------------------------------------------- sheets */
+// Add a row here and it appears on the Onboarding sheets tile.
+export const sheets = [
+  {
+    name: 'Onboarding Automation Sheet',
+    tag: 'Source',
+    desc: 'The joiners feed. Apps Script reads this every five minutes and turns each new row into a ticket.',
+    columns: 'First Name · Last Name · DOJ · Joining Location · Laptop Request',
+    url: 'https://docs.google.com/spreadsheets/d/1j05L-fbJY7fX8oCxJfu2rDoLBDp2NuVUNrUWplU8Zww/edit?gid=0#gid=0'
+  }
+];
+
 /* ----------------------------------------------------------- dates */
 export const today = () => new Date().toISOString().slice(0, 10);
 
-export const daysLeft = (due) =>
-  Math.round((new Date(due + 'T00:00:00') - new Date(today() + 'T00:00:00')) / 864e5);
+const diff = (a, b) =>
+  Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 864e5);
+
+/** Days since the joining date. Negative means they have not started yet. */
+export const daysSince = (doj) => diff(doj, today());
 
 export const pretty = (iso) =>
   iso ? new Date(iso + 'T00:00:00').toLocaleDateString('en-GB',
     { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 
-export function dueChip(due) {
-  const d = daysLeft(due);
-  if (d < 0)   return { cls: 'red',   text: `${-d}d overdue` };
-  if (d === 0) return { cls: 'amber', text: 'Due today' };
-  return { cls: 'grey', text: `${d}d left` };
+/** How a ticket reads at a glance. There is no deadline any more, so this
+ *  shows how long it has been sitting: quiet at first, louder as it ages. */
+export function ageChip(doj) {
+  const d = daysSince(doj);
+  if (d < 0)   return { cls: 'grey',  text: d === -1 ? 'Joins tomorrow' : `Joins in ${-d}d` };
+  if (d === 0) return { cls: 'accent', text: 'Joins today' };
+  if (d < 3)   return { cls: 'grey',  text: `Open ${d}d` };
+  if (d < 7)   return { cls: 'amber', text: `Open ${d}d` };
+  return { cls: 'red', text: `Open ${d}d` };
 }
 
 export const STATUS = { todo: 'To do', progress: 'In progress', done: 'Done', na: 'N/A' };
 
 /* ------------------------------------------------------------ auth */
-/** Wraps every page. Signed-out visitors get the Google button; anyone
+/** Wraps every page. Signed-out visitors get the sign-in form; anyone
  *  outside bayzat.com is turned away here and again by row level security
  *  in Postgres, so the database is the real gate. */
 export function AuthGate({ children }) {
