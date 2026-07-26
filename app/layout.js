@@ -51,26 +51,23 @@ h1,h2,h3,p{margin:0}
   background:var(--blue-soft);transition:all .15s var(--ease)}
 .back:hover{background:var(--blue);color:#fff}
 
-.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:13px;align-items:start}
-.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:19px;
-  display:block;transition:all .17s var(--ease)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:13px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;
+  display:flex;flex-direction:column;min-height:186px;transition:all .17s var(--ease)}
 .tile:hover{border-color:var(--blue);box-shadow:var(--shadow);transform:translateY(-2px)}
-.tile .ico{width:36px;height:36px;border-radius:9px;background:var(--blue-soft);color:var(--blue-ink);
-  display:grid;place-items:center;font-size:15px;font-weight:700;margin-bottom:13px}
+.tile .badges{margin-top:auto;padding-top:13px}
+.tile .ico{width:40px;height:40px;border-radius:10px;background:var(--blue-soft);color:var(--blue);
+  display:grid;place-items:center;margin-bottom:14px;transition:all .17s var(--ease)}
+.tile:hover .ico{background:var(--blue);color:#fff}
+.tile .ico.violet{background:var(--s3-soft);color:var(--s3)}
+.tile:hover .ico.violet{background:var(--s3);color:#fff}
+.tile .ico.emerald{background:var(--s6-soft);color:var(--s6)}
+.tile:hover .ico.emerald{background:var(--s6);color:#fff}
 .tile h2{font-size:14.5px;font-weight:700;letter-spacing:-.2px}
 .tile p{font-size:12.5px;color:var(--ink3);font-weight:500;line-height:1.55;margin-top:6px}
 .tile.soon{opacity:.5;pointer-events:none;border-style:dashed}
 .tile.soon .ico{background:var(--line2);color:var(--ink3)}
-.tile.chart .ico{background:var(--violet-soft);color:var(--violet)}
-.tile.chart:hover{border-color:var(--violet)}
-.tile.compact{padding:13px 15px;display:flex;align-items:center;gap:12px}
-.tile.compact .ico{width:29px;height:29px;border-radius:7px;margin:0;font-size:12px;
-  background:var(--emerald-soft);color:var(--emerald)}
-.tile.compact:hover{border-color:var(--emerald)}
-.tile.compact h2{font-size:13.5px}
-.tile.compact p{font-size:11.5px;margin-top:2px}
-.badges{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
-.lock{margin-left:auto;font-size:11px;color:var(--emerald);font-weight:600;white-space:nowrap}
+.badges{display:flex;gap:6px;flex-wrap:wrap}
 
 .chip{font-size:10.5px;font-weight:600;border-radius:6px;padding:4px 8px;white-space:nowrap;
   display:inline-block}
@@ -287,7 +284,11 @@ label{display:block;font-size:9.5px;font-weight:600;letter-spacing:.6px;text-tra
 .mval{font:700 12.5px Inter;width:64px;text-align:right;color:var(--ink)}
 .msub{font-size:11px;color:var(--ink3);font-weight:500;width:96px;text-align:right}
 .panelbox{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:17px 18px}
-.months{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.months{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
+.monthchip{border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:8px;
+  padding:8px 14px;font:600 12px Inter;cursor:pointer;transition:all .15s var(--ease)}
+.monthchip:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-soft)}
+.monthchip[data-on="1"]{background:var(--blue);border-color:var(--blue);color:#fff}
 
 /* --------------------------------------------------------- sources */
 .locked{background:var(--emerald-soft);border:1px solid #B7E0CD;border-radius:10px;
