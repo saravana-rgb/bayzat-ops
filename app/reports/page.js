@@ -91,10 +91,8 @@ function Report() {
               <div key={r.position} className="mrow">
                 <span className="mlbl">{r.label}</span>
                 <span className="mtrack">
-                  <span className="mfill" style={{
-                    width: Math.max(Math.round((Number(r.avg_days) / slowest) * 100), 3) + '%',
-                    background: Number(r.avg_days) >= 7 ? 'var(--rose)'
-                      : Number(r.avg_days) >= 3 ? 'var(--amber)' : 'var(--emerald)'
+                  <span className={'mfill p' + r.position} style={{
+                    width: Math.max(Math.round((Number(r.avg_days) / slowest) * 100), 3) + '%'
                   }} />
                 </span>
                 <span className="mval">{Number(r.avg_days).toFixed(1)}d</span>
