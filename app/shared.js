@@ -13,15 +13,37 @@ export const supabase = createClient(
 export const ADMINS = ['saravana@bayzat.com'];
 export const isAdmin = (email) => ADMINS.includes((email || '').toLowerCase());
 
+
+/* ------------------------------------------------------------ icons */
+/* Drawn inline so nothing depends on a font shipping the right glyph. */
+const PATHS = {
+  onboarding: 'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2 M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2 M9 14l2 2 4-4',
+  reports:    'M18 20V10 M12 20V4 M6 20v-6',
+  sources:    'M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z M4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7 M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
+  plus:       'M12 5v14 M5 12h14'
+};
+
+export function Icon({ name, size = 20 }) {
+  const d = PATHS[name] || PATHS.plus;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {d.split(' M').map((seg, i) => (
+        <path key={i} d={(i ? 'M' : '') + seg} />
+      ))}
+    </svg>
+  );
+}
+
 /* ----------------------------------------------------------- tiles */
 // Adding a tile later means one entry here and one folder under app/.
 export const tiles = [
   {
     slug: 'onboarding',
-    name: 'Onboarding tracker',
+    name: 'Onboarding',
     blurb: 'Every new joiner and the six IT steps they are still waiting on.',
     href: '/onboarding',
-    icon: '\u2713',
+    icon: 'onboarding',
     live: true
   },
   {
@@ -29,27 +51,27 @@ export const tiles = [
     name: 'Reports',
     blurb: 'How long each step takes, month by month, and what held it up.',
     href: '/reports',
-    icon: '\u25F4',
+    icon: 'reports',
     live: true,
-    chart: true
-  },
-  {
-    slug: 'next',
-    name: 'Your next tile',
-    blurb: 'Offboarding, asset register, access reviews \u2014 whatever comes next.',
-    href: '#',
-    icon: '+',
-    live: false
+    tone: 'violet'
   },
   {
     slug: 'sources',
     name: 'Sources',
-    blurb: 'Sheets, repo and database behind every tile.',
+    blurb: 'The sheets, repo and database behind every tile.',
     href: '/sources',
-    icon: '\u26BF',
+    icon: 'sources',
     live: true,
-    compact: true,
+    tone: 'emerald',
     adminOnly: true
+  },
+  {
+    slug: 'next',
+    name: 'Your next tile',
+    blurb: 'Offboarding, asset register, access reviews — whatever comes next.',
+    href: '#',
+    icon: 'plus',
+    live: false
   }
 ];
 
@@ -58,7 +80,7 @@ export const tiles = [
 // their sources sit under their own heading.
 export const sources = [
   {
-    group: 'Onboarding tracker',
+    group: 'Onboarding',
     items: [
       {
         name: 'Onboarding Automation Sheet',
