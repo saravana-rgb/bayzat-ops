@@ -74,6 +74,8 @@ function Tracker({ email }) {
   const [q, setQ] = useState('');
   const [synced, setSynced] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [stepSel, setStepSel] = useState(null);   // which step the batch view is showing
+  const [picked, setPicked] = useState({});       // ids ticked in the batch view
 
   const fetchAll = useCallback(async () => {
     setBusy(true);
@@ -134,6 +136,21 @@ function Tracker({ email }) {
     fetchAll();
   }
 
+  /** Mark the same step done for several joiners in one go. */
+  async function bulkDone(ids) {
+    if (!ids.length) return;
+    setTickets(ts => ts.map(t => ({
+      ...t,
+      ticket_steps: t.ticket_steps.map(s => ids.includes(s.id) ? { ...s, status: 'done' } : s)
+    })));
+    setPicked({});
+    const { error } = await supabase.from('ticket_steps')
+      .update({ status: 'done', updated_at: new Date().toISOString(), updated_by: email })
+      .in('id', ids);
+    if (error) setError(error.message);
+    fetchAll();
+  }
+
   async function setField(step, patch) {
     await supabase.from('ticket_steps').update(patch).eq('id', step.id);
     fetchAll();
@@ -156,6 +173,19 @@ function Tracker({ email }) {
   const upcoming = waiting.filter(t => daysSince(t.doj) < 0);    // joining date is still ahead
   const stale    = waiting.filter(t => daysSince(t.doj) >= 7);   // waiting a week or more
   const stepCount = waiting.reduce((n, t) => n + pendingOf(t).length, 0);
+
+  // the same pending work, grouped by step instead of by person
+  const byStep = [];
+  open.forEach(t => t.ticket_steps.forEach(s => {
+    let g = byStep.find(x => x.position === s.position);
+    if (!g) { g = { position: s.position, label: s.label, people: [] }; byStep.push(g); }
+    if (s.status !== 'done' && s.status !== 'na') g.people.push({ t, s });
+  }));
+  byStep.sort((a, b) => a.position - b.position);
+  const busiest = byStep.reduce((m, g) => Math.max(m, g.people.length), 0);
+  const active = byStep.find(g => g.position === stepSel)
+    || byStep.slice().sort((a, b) => b.people.length - a.people.length)[0];
+  const pickedIds = Object.keys(picked).filter(k => picked[k]);
   const detail = tickets.find(t => t.id === openId);
 
   return (
@@ -173,6 +203,7 @@ function Tracker({ email }) {
       <div className="toolbar">
         <div className="tabset">
           {[['today', 'To do', waiting.length],
+            ['bystep','By task',      stepCount],
             ['open',  'All tickets',  open.length],
             ['closed','Completed',    closed.length]].map(([k, label, n]) => (
             <button key={k} data-on={tab === k ? '1' : '0'} onClick={() => setTab(k)}>
@@ -199,6 +230,83 @@ function Tracker({ email }) {
                    pendingOf={pendingOf} onSet={setStep} onOpen={setOpenId} />
             <Group title="Joining later — get ahead" cls="calm" list={upcoming}
                    pendingOf={pendingOf} onSet={setStep} onOpen={setOpenId} />
+          </>)}
+
+      {tab === 'bystep' && (stepCount === 0
+        ? <Empty b="No outstanding work" s="Every step on every open ticket is done." />
+        : <>
+            <div className="stepchips">
+              {byStep.map(g => (
+                <button key={g.position} className={'stepchip' + (g.people.length ? '' : ' empty')}
+                  data-on={active && active.position === g.position ? '1' : '0'}
+                  onClick={() => { setStepSel(g.position); setPicked({}); }}>
+                  {g.label}<span className="n">{g.people.length}</span>
+                </button>
+              ))}
+            </div>
+
+            {active && (
+              <div className="batch">
+                <div className="batch-h">
+                  <span className="t">Waiting on {active.label.toLowerCase()}</span>
+                  <span className="c">
+                    {active.people.length === 1 ? '1 person' : active.people.length + ' people'}
+                  </span>
+                  <button className="mini" style={{ marginLeft: 'auto' }}
+                    onClick={() => {
+                      const next = {};
+                      active.people.forEach(p => { next[p.s.id] = true; });
+                      setPicked(next);
+                    }}>Select all</button>
+                </div>
+
+                {active.people.length === 0
+                  ? <div style={{ padding: '18px 17px', fontSize: 12.5, color: 'var(--ink3)' }}>
+                      Nobody is waiting on this one.
+                    </div>
+                  : active.people.map(({ t, s }) => (
+                      <label key={s.id} className="prow">
+                        <input type="checkbox" checked={!!picked[s.id]}
+                          onChange={() => setPicked(p => ({ ...p, [s.id]: !p[s.id] }))} />
+                        <span className="ini">
+                          {(t.first_name[0] || '') + (t.last_name[0] || '')}
+                        </span>
+                        <span className="nm">{t.first_name} {t.last_name}</span>
+                        <span className="chip grey">{t.location || 'no location'}</span>
+                        <span className={'chip ' + ageChip(t.doj).cls}>{ageChip(t.doj).text}</span>
+                        {s.status === 'progress' && <span className="chip amber">In progress</span>}
+                      </label>
+                    ))}
+
+                <div className="batch-f">
+                  <span style={{ fontSize: 12.5, color: 'var(--ink3)', fontWeight: 600 }}>
+                    {pickedIds.length ? pickedIds.length + ' selected' : 'Nothing selected'}
+                  </span>
+                  <button className="btn" style={{ marginLeft: 'auto' }}
+                    disabled={!pickedIds.length}
+                    onClick={() => bulkDone(pickedIds)}>
+                    Mark {pickedIds.length || ''} done
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="bars">
+              <div className="sec">Where the queue is stuck</div>
+              {byStep.map(g => (
+                <div key={g.position} className="bar-row">
+                  <span className="bar-lbl">{g.label}</span>
+                  <span className="bar-track">
+                    <span className="bar-fill" style={{
+                      width: busiest ? Math.round((g.people.length / busiest) * 100) + '%' : '0%',
+                      background: g.people.length >= 4 ? 'var(--rose)'
+                        : g.people.length ? 'linear-gradient(90deg,#4F46E5,#7C3AED)' : 'transparent'
+                    }} />
+                  </span>
+                  <span className="bar-n">{g.people.length}</span>
+                </div>
+              ))}
+            </div>
           </>)}
 
       {tab === 'open' && (open.length === 0
