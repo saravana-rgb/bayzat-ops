@@ -28,7 +28,7 @@ function Shell() {
     <div className="wrap">
       <Bar
         title="Bayzat Ops"
-        sub="Internal tools for the IT and People teams"
+        sub="Internal tools for the IT and People Ops"
         right={<>{email}<button className="mini" onClick={() => supabase.auth.signOut()}>Sign out</button></>}
       />
 
