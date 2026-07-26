@@ -1,6 +1,6 @@
 export const metadata = {
   title: 'Bayzat Ops',
-  description: 'Internal tools for the IT and People teams'
+  description: 'Internal tools for the IT and People Ops'
 };
 
 const css = `
