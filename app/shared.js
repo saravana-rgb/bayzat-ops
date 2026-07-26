@@ -25,6 +25,15 @@ export const tiles = [
     live: true
   },
   {
+    slug: 'reports',
+    name: 'Reports',
+    blurb: 'How long each step takes, month by month, and what held it up.',
+    href: '/reports',
+    icon: '\u25F4',
+    live: true,
+    chart: true
+  },
+  {
     slug: 'next',
     name: 'Your next tile',
     blurb: 'Offboarding, asset register, access reviews \u2014 whatever comes next.',
