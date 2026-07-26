@@ -6,43 +6,6 @@ const ORDER = ['todo', 'progress', 'done', 'na'];
 const DEVICES = ['Company laptop', 'Leasing device', 'Personal device', 'Not required'];
 
 /* Styles specific to this screen, kept here so the file is self-contained. */
-const CSS = `
-.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
-.tabset{display:flex;gap:3px;background:var(--sunk);border-radius:10px;padding:3px}
-.tabset button{border:0;background:transparent;color:var(--ink2);border-radius:7px;
-  padding:7px 14px;font:700 12px Inter;cursor:pointer;white-space:nowrap}
-.tabset button:hover{color:var(--ink)}
-.tabset button[data-on="1"]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(22,24,28,.10)}
-.search{flex:1;min-width:150px;max-width:280px;background:#fff;border:1px solid var(--line);
-  border-radius:9px;padding:9px 12px;font:500 12.5px Inter;color:var(--ink);outline:none}
-.search:focus{border-color:var(--accent)}
-.sync{margin-left:auto;display:flex;align-items:center;gap:8px;font:600 11px Inter;color:var(--ink3)}
-
-.pcard{background:var(--card);border:1px solid var(--line);border-radius:var(--rl);overflow:hidden;
-  transition:transform .2s var(--ease),box-shadow .2s var(--ease),border-color .2s}
-.pcard:hover{border-color:#D8D3C7;box-shadow:0 8px 26px rgba(22,24,28,.07);transform:translateY(-2px)}
-.pcard.late{border-color:#E9C9C6}
-.pc-top{display:flex;align-items:flex-start;gap:12px;padding:15px 16px 0;flex-wrap:wrap}
-.pc-name{font-size:15px;font-weight:800;letter-spacing:-.2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.pc-ref{font:700 10px Inter;letter-spacing:.03em;background:var(--sunk);color:var(--ink3);
-  border-radius:6px;padding:3px 7px;font-variant-numeric:tabular-nums}
-.pc-meta{font-size:11.5px;color:var(--ink3);font-weight:500;margin-top:4px}
-.pc-right{margin-left:auto;display:flex;align-items:center;gap:8px}
-.pc-count{font:800 11px Inter;color:var(--ink3)}
-.pc-bar{padding:11px 16px 0}
-.pc-steps{padding:4px 16px 14px}
-.pstep{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line2);
-  flex-wrap:wrap;transition:opacity .2s var(--ease)}
-.pstep:last-child{border-bottom:0}
-.pnum{width:20px;height:20px;border-radius:6px;background:var(--sunk);display:grid;place-items:center;
-  font:800 9.5px Inter;color:var(--ink3);flex:none}
-.plabel{font-size:12.5px;font-weight:600;flex:1;min-width:120px}
-.pacts{display:flex;gap:5px;margin-left:auto}
-.pfoot{border-top:1px solid var(--line2);padding:11px 16px;display:flex;gap:8px;align-items:center;
-  background:var(--sunk);flex-wrap:wrap}
-.note-txt{font-size:11.5px;color:var(--ink3);font-weight:500}
-.allgood{font-size:11.5px;color:var(--accent);font-weight:600;padding:5px 0}
-`;
 
 export default function OnboardingPage() {
   return <AuthGate><Shell /></AuthGate>;
@@ -55,7 +18,6 @@ function Shell() {
   }, []);
   return (
     <div className="wrap">
-      <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <Bar
         title="Onboarding tracker"
         sub="Who is joining and what IT still owes them"
@@ -272,9 +234,11 @@ function Tracker({ email }) {
                           {(t.first_name[0] || '') + (t.last_name[0] || '')}
                         </span>
                         <span className="nm">{t.first_name} {t.last_name}</span>
-                        <span className="chip grey">{t.location || 'no location'}</span>
-                        <span className={'chip ' + ageChip(t.doj).cls}>{ageChip(t.doj).text}</span>
-                        {s.status === 'progress' && <span className="chip amber">In progress</span>}
+                        <span className="sp">
+                          <span className="chip grey">{t.location || 'no location'}</span>
+                          <span className={'chip ' + ageChip(t.doj).cls}>{ageChip(t.doj).text}</span>
+                          {s.status === 'progress' && <span className="chip amber">In progress</span>}
+                        </span>
                       </label>
                     ))}
 
