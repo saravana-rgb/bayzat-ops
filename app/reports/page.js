@@ -71,7 +71,7 @@ function Report() {
     <>
       <div className="months">
         {months.map(m => (
-          <button key={m} className="stepchip" data-on={m === active ? '1' : '0'}
+          <button key={m} className="monthchip" data-on={m === active ? '1' : '0'}
             onClick={() => setMonth(m)}>{prettyMonth(m)}</button>
         ))}
       </div>
