@@ -6,6 +6,13 @@ import { AuthGate, Bar, isAdmin, sources, supabase } from '../shared';
    appears here, under whichever group you give it. */
 
 
+/** Two letters standing in for an icon, so nothing depends on a font glyph. */
+function initials(kind) {
+  const map = { 'Google Sheet': 'GS', 'Automation': 'AS', 'Code': 'GH',
+                'Database': 'DB', 'Hosting': 'VC' };
+  return map[kind] || (kind || '?').slice(0, 2).toUpperCase();
+}
+
 export default function SourcesPage() {
   return <AuthGate><Shell /></AuthGate>;
 }
@@ -41,9 +48,9 @@ function Shell() {
       />
 
       <div className="locked">
-        <span style={{ fontSize: 15 }}>⚷</span>
+        <span className="tag">PRIVATE</span>
         <div>
-          <b>Only you can see this page</b><br />
+          <b>Only you can see this page</b>
           <span>Each service still asks for its own login when you open it.</span>
         </div>
       </div>
@@ -54,7 +61,7 @@ function Shell() {
           <div className="grid">
             {g.items.map(s => (
               <div key={s.name + s.url} className="src">
-                <div className={'src-ico ' + (s.tone || 'grey')}>▤</div>
+                <div className={'src-ico ' + (s.tone || 'grey')}>{initials(s.kind)}</div>
                 <div className="src-body">
                   <div className="src-name">
                     {s.name}
@@ -66,7 +73,7 @@ function Shell() {
                   <div className="src-desc">{s.desc}</div>
                   {s.detail && <div className="src-detail">{s.detail}</div>}
                 </div>
-                <a className="btn teal src-act" href={s.url} target="_blank" rel="noopener noreferrer">
+                <a className="btn src-act" href={s.url} target="_blank" rel="noopener noreferrer">
                   Open
                 </a>
               </div>
