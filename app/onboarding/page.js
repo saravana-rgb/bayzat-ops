@@ -152,9 +152,9 @@ function Tracker({ email }) {
 
   const waiting = open.filter(t => pendingOf(t).length)
     .sort((a, b) => daysSince(b.doj) - daysSince(a.doj));
-  const chasing = waiting.filter(t => daysSince(t.doj) >= 3);
-  const recent  = waiting.filter(t => daysSince(t.doj) >= 0 && daysSince(t.doj) < 3);
-  const upcoming = waiting.filter(t => daysSince(t.doj) < 0);
+  const joined   = waiting.filter(t => daysSince(t.doj) >= 0);   // already started, work is owed now
+  const upcoming = waiting.filter(t => daysSince(t.doj) < 0);    // joining date is still ahead
+  const stale    = waiting.filter(t => daysSince(t.doj) >= 7);   // waiting a week or more
   const stepCount = waiting.reduce((n, t) => n + pendingOf(t).length, 0);
   const detail = tickets.find(t => t.id === openId);
 
@@ -163,18 +163,18 @@ function Tracker({ email }) {
       {error && <div className="err">{error}</div>}
 
       <div className="stats">
-        <Stat n={open.length} l="Open tickets" />
-        <Stat n={chasing.length} l="Chasing 3d+" c="hot" />
-        <Stat n={stepCount}   l="Steps pending" />
-        <Stat n={upcoming.length} l="Not joined yet" />
-        <Stat n={closed.length} l="Closed" />
+        <Stat n={open.length}     l="Open tickets" />
+        <Stat n={stepCount}       l="Steps to do" c="warm" />
+        <Stat n={stale.length}    l="Waiting a week" c="hot" />
+        <Stat n={upcoming.length} l="Starting soon" c="calm" />
+        <Stat n={closed.length}   l="Closed" c="good" />
       </div>
 
       <div className="toolbar">
         <div className="tabset">
-          {[['today', 'Needs action', waiting.length],
-            ['open',  'All open',     open.length],
-            ['closed','Closed',       closed.length]].map(([k, label, n]) => (
+          {[['today', 'To do', waiting.length],
+            ['open',  'All tickets',  open.length],
+            ['closed','Completed',    closed.length]].map(([k, label, n]) => (
             <button key={k} data-on={tab === k ? '1' : '0'} onClick={() => setTab(k)}>
               {label}{n ? ` · ${n}` : ''}
             </button>
@@ -195,9 +195,10 @@ function Tracker({ email }) {
                  s={term ? 'Try a name, a ticket ref, or a location.'
                          : 'Every open step is done. New joiners appear here within five minutes of hitting the sheet.'} />
         : <>
-            <Group title="Been waiting longest" cls="hot" list={chasing} pendingOf={pendingOf} onSet={setStep} onOpen={setOpenId} />
-            <Group title="Recently joined" list={recent} pendingOf={pendingOf} onSet={setStep} onOpen={setOpenId} />
-            <Group title="Not started yet" list={upcoming} pendingOf={pendingOf} onSet={setStep} onOpen={setOpenId} />
+            <Group title="Already started — work is owed" cls="hot" list={joined}
+                   pendingOf={pendingOf} onSet={setStep} onOpen={setOpenId} />
+            <Group title="Joining later — get ahead" cls="calm" list={upcoming}
+                   pendingOf={pendingOf} onSet={setStep} onOpen={setOpenId} />
           </>)}
 
       {tab === 'open' && (open.length === 0
