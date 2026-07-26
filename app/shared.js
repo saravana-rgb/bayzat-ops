@@ -8,6 +8,11 @@ export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
+/* ---------------------------------------------------------- access */
+// Only these people see the Sources tile. Everyone else gets the tracker.
+export const ADMINS = ['saravana@bayzat.com'];
+export const isAdmin = (email) => ADMINS.includes((email || '').toLowerCase());
+
 /* ----------------------------------------------------------- tiles */
 // Adding a tile later means one entry here and one folder under app/.
 export const tiles = [
@@ -20,32 +25,78 @@ export const tiles = [
     live: true
   },
   {
-    slug: 'sheets',
-    name: 'Onboarding sheets',
-    blurb: 'Every Google Sheet behind this flow, in one place.',
-    href: '/sheets',
-    icon: '\u25A6',
-    live: true
-  },
-  {
     slug: 'next',
     name: 'Your next tile',
-    blurb: 'Offboarding, asset register, access reviews — whatever comes next.',
+    blurb: 'Offboarding, asset register, access reviews \u2014 whatever comes next.',
     href: '#',
     icon: '+',
     live: false
+  },
+  {
+    slug: 'sources',
+    name: 'Sources',
+    blurb: 'Sheets, repo and database behind every tile.',
+    href: '/sources',
+    icon: '\u26BF',
+    live: true,
+    compact: true,
+    adminOnly: true
   }
 ];
 
-/* ----------------------------------------------------------- sheets */
-// Add a row here and it appears on the Onboarding sheets tile.
-export const sheets = [
+/* --------------------------------------------------------- sources */
+// Where everything actually lives. Grouped by tile, so as tiles are added
+// their sources sit under their own heading.
+export const sources = [
   {
-    name: 'Onboarding Automation Sheet',
-    tag: 'Source',
-    desc: 'The joiners feed. Apps Script reads this every five minutes and turns each new row into a ticket.',
-    columns: 'First Name · Last Name · DOJ · Joining Location · Laptop Request',
-    url: 'https://docs.google.com/spreadsheets/d/1j05L-fbJY7fX8oCxJfu2rDoLBDp2NuVUNrUWplU8Zww/edit?gid=0#gid=0'
+    group: 'Onboarding tracker',
+    items: [
+      {
+        name: 'Onboarding Automation Sheet',
+        kind: 'Google Sheet',
+        tone: 'green',
+        desc: 'The joiners feed. Apps Script reads it and turns each new row into a ticket.',
+        detail: 'First Name \u00b7 Last Name \u00b7 DOJ \u00b7 Joining Location \u00b7 Laptop Request',
+        url: 'https://docs.google.com/spreadsheets/d/1j05L-fbJY7fX8oCxJfu2rDoLBDp2NuVUNrUWplU8Zww/edit?gid=0#gid=0'
+      },
+      {
+        name: 'Apps Script',
+        kind: 'Automation',
+        tone: 'amber',
+        desc: 'Watches the sheet every five minutes, creates tickets, sends both emails.',
+        detail: 'Open the sheet \u2192 Extensions \u2192 Apps Script',
+        url: 'https://docs.google.com/spreadsheets/d/1j05L-fbJY7fX8oCxJfu2rDoLBDp2NuVUNrUWplU8Zww/edit?gid=0#gid=0'
+      }
+    ]
+  },
+  {
+    group: 'Platform',
+    items: [
+      {
+        name: 'GitHub repository',
+        kind: 'Code',
+        tone: 'grey',
+        desc: 'This app. Committing to main redeploys it automatically.',
+        detail: 'saravana-rgb/bayzat-ops',
+        url: 'https://github.com/saravana-rgb/bayzat-ops'
+      },
+      {
+        name: 'Supabase project',
+        kind: 'Database',
+        tone: 'accent',
+        desc: 'Tickets, steps, users and access rules. The single source of truth.',
+        detail: 'Tables: tickets \u00b7 ticket_steps \u00b7 view: v_pending_steps',
+        url: 'https://supabase.com/dashboard'
+      },
+      {
+        name: 'Vercel project',
+        kind: 'Hosting',
+        tone: 'grey',
+        desc: 'Serves this app and rebuilds on every commit.',
+        detail: 'bayzat-ops-vert.vercel.app',
+        url: 'https://vercel.com/dashboard'
+      }
+    ]
   }
 ];
 
