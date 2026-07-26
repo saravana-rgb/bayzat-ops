@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { AuthGate, Bar, isAdmin, supabase, tiles } from './shared';
+import { AuthGate, Bar, Icon, isAdmin, supabase, tiles } from './shared';
 
 export default function Home() {
   return <AuthGate><Shell /></AuthGate>;
@@ -23,8 +23,6 @@ function Shell() {
 
   // the Sources tile only exists for admins
   const visible = tiles.filter(t => !t.adminOnly || isAdmin(email));
-  const main = visible.filter(t => !t.compact);
-  const utility = visible.filter(t => t.compact);
 
   return (
     <div className="wrap">
@@ -35,45 +33,31 @@ function Shell() {
       />
 
       <div className="tiles">
-        {main.map(t => {
+        {visible.map(t => {
           const inner = (
             <>
-              <div className="ico">{t.icon}</div>
+              <div className={'ico' + (t.tone ? ' ' + t.tone : '')}>
+                <Icon name={t.icon} />
+              </div>
               <h2>{t.name}</h2>
               <p>{t.blurb}</p>
-              {t.slug === 'onboarding' && counts && (
-                <div className="badges">
+              <div className="badges">
+                {t.slug === 'onboarding' && counts && (<>
                   {counts.old > 0 && <span className="chip red">{counts.old} waiting a week</span>}
                   {counts.people > 0
-                    ? <span className="chip accent">{counts.people} joiner{counts.people > 1 ? 's' : ''} pending</span>
+                    ? <span className="chip accent">{counts.people} pending</span>
                     : <span className="chip green">All clear</span>}
-                  {counts.steps > 0 && <span className="chip grey">{counts.steps} steps</span>}
-                </div>
-              )}
-              {!t.live && <div className="badges"><span className="chip grey">Coming later</span></div>}
+                </>)}
+                {t.slug === 'sources' && <span className="chip green">Only you</span>}
+                {!t.live && <span className="chip grey">Coming later</span>}
+              </div>
             </>
           );
-          const cls = 'tile' + (t.chart ? ' chart' : '');
           return t.live
-            ? <a key={t.slug} className={cls} href={t.href}>{inner}</a>
+            ? <a key={t.slug} className="tile" href={t.href}>{inner}</a>
             : <div key={t.slug} className="tile soon">{inner}</div>;
         })}
       </div>
-
-      {utility.length > 0 && (
-        <div className="tiles" style={{ marginTop: 14 }}>
-          {utility.map(t => (
-            <a key={t.slug} className="tile compact" href={t.href}>
-              <div className="ico">{t.icon}</div>
-              <div>
-                <h2>{t.name}</h2>
-                <p>{t.blurb}</p>
-              </div>
-              <span className="lock">Only you</span>
-            </a>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
