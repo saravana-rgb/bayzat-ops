@@ -32,7 +32,7 @@ function Shell() {
   return (
     <div className="wrap">
       <Bar
-        title="Onboarding tracker"
+        title="Onboarding"
         sub="Who is joining and what IT still owes them"
         right={<a className="back" href="/">← All tiles</a>}
       />
