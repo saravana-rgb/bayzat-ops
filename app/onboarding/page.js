@@ -5,6 +5,19 @@ import { AuthGate, Bar, STATUS, ageChip, daysSince, pretty, supabase } from '../
 const ORDER = ['todo', 'progress', 'done', 'na'];
 const DEVICES = ['Company laptop', 'Leasing device', 'Personal device', 'Not required'];
 
+/* Why something is held up. Recorded on the comment so the monthly report
+   can separate our own delays from a vendor's. */
+const REASONS = [
+  ['',          'No delay'],
+  ['it',        'Waiting on IT'],
+  ['vendor',    'Waiting on vendor'],
+  ['approval',  'Waiting on approval'],
+  ['employee',  'Waiting on employee'],
+  ['shipping',  'In transit / shipping'],
+  ['other',     'Something else']
+];
+const REASON_LABEL = Object.fromEntries(REASONS.map(r => r));
+
 /* Styles specific to this screen, kept here so the file is self-contained. */
 
 export default function OnboardingPage() {
@@ -38,6 +51,8 @@ function Tracker({ email }) {
   const [busy, setBusy] = useState(false);
   const [stepSel, setStepSel] = useState(null);   // which step the batch view is showing
   const [picked, setPicked] = useState({});       // ids ticked in the batch view
+  const [foldOpen, setFoldOpen] = useState(false);
+  const [events, setEvents] = useState([]);
 
   const fetchAll = useCallback(async () => {
     setBusy(true);
@@ -56,6 +71,13 @@ function Tracker({ email }) {
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  useEffect(() => {
+    if (!openId) { setEvents([]); return; }
+    supabase.from('step_events').select('*').eq('ticket_id', openId)
+      .order('created_at', { ascending: false }).limit(60)
+      .then(({ data }) => setEvents(data || []));
+  }, [openId, tickets]);
 
   // "/" jumps to search, Escape closes the panel
   useEffect(() => {
@@ -111,6 +133,19 @@ function Tracker({ email }) {
       .in('id', ids);
     if (error) setError(error.message);
     fetchAll();
+  }
+
+  /** Logs a comment against a step, with an optional reason for the delay. */
+  async function addComment(step, comment, reason) {
+    if (!comment.trim()) return;
+    const { error } = await supabase.rpc('add_step_comment', {
+      p_step_id: step.id, p_comment: comment.trim(), p_reason: reason || '', p_actor: email
+    });
+    if (error) setError(error.message);
+    fetchAll();
+    supabase.from('step_events').select('*').eq('ticket_id', step.ticket_id)
+      .order('created_at', { ascending: false }).limit(60)
+      .then(({ data }) => setEvents(data || []));
   }
 
   async function setField(step, patch) {
@@ -255,21 +290,31 @@ function Tracker({ email }) {
               </div>
             )}
 
-            <div className="bars">
-              <div className="sec">Where the queue is stuck</div>
-              {byStep.map(g => (
-                <div key={g.position} className="bar-row">
-                  <span className="bar-lbl">{g.label}</span>
-                  <span className="bar-track">
-                    <span className="bar-fill" style={{
-                      width: busiest ? Math.round((g.people.length / busiest) * 100) + '%' : '0%',
-                      background: g.people.length >= 4 ? 'var(--rose)'
-                        : g.people.length ? 'linear-gradient(90deg,#4F46E5,#7C3AED)' : 'transparent'
-                    }} />
-                  </span>
-                  <span className="bar-n">{g.people.length}</span>
+            <div className="fold">
+              <div className="fold-h" onClick={() => setFoldOpen(o => !o)}>
+                <span className="fold-t">Where the queue is stuck</span>
+                <span className="fold-c">
+                  {byStep.filter(g => g.people.length).length} of {byStep.length} steps have someone waiting
+                </span>
+                <span className="caret" data-open={foldOpen ? '1' : '0'}>▾</span>
+              </div>
+              {foldOpen && (
+                <div className="fold-b">
+                  {byStep.map(g => (
+                    <div key={g.position} className="bar-row">
+                      <span className="bar-lbl">{g.label}</span>
+                      <span className="bar-track">
+                        <span className="bar-fill" style={{
+                          width: busiest ? Math.round((g.people.length / busiest) * 100) + '%' : '0%',
+                          background: g.people.length >= 4 ? 'var(--rose)'
+                            : g.people.length ? 'var(--blue)' : 'transparent'
+                        }} />
+                      </span>
+                      <span className="bar-n">{g.people.length}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           </>)}
 
@@ -285,7 +330,8 @@ function Tracker({ email }) {
             {closed.map(t => <Person key={t.id} t={t} pending={[]} onSet={setStep} onOpen={setOpenId} />)}
           </div>)}
 
-      {detail && <Panel t={detail} onClose={() => setOpenId(null)} onSet={setStep} onField={setField} />}
+      {detail && <Panel t={detail} events={events} onClose={() => setOpenId(null)}
+                        onSet={setStep} onField={setField} onComment={addComment} />}
     </>
   );
 }
@@ -378,7 +424,7 @@ function Person({ t, pending, onSet, onOpen }) {
   );
 }
 
-function Panel({ t, onClose, onSet, onField }) {
+function Panel({ t, events, onClose, onSet, onField, onComment }) {
   const chip = ageChip(t.doj);
   const overdue = t.status === 'open' && daysSince(t.doj) >= 7;
   return (
@@ -386,7 +432,7 @@ function Panel({ t, onClose, onSet, onField }) {
       <div className="panel">
         <div className="ph">
           <div>
-            <h2 style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-.3px' }}>
+            <h2 style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-.3px' }}>
               {t.first_name} {t.last_name} <span className="pc-ref">{t.ref}</span>
             </h2>
             <div style={{ fontSize: 11.5, color: 'var(--ink3)', fontWeight: 500, marginTop: 4 }}>
@@ -400,41 +446,98 @@ function Panel({ t, onClose, onSet, onField }) {
           {t.status === 'closed'
             ? <span className="chip green">Closed {pretty((t.closed_at || '').slice(0, 10))}</span>
             : <>
-                <span className="chip purple">
-                  Open · {t.ticket_steps.filter(s => ['done', 'na'].includes(s.status)).length} of {t.ticket_steps.length}
+                <span className="chip accent">
+                  {t.ticket_steps.filter(s => ['done', 'na'].includes(s.status)).length} of {t.ticket_steps.length} done
                 </span>
                 <span className={'chip ' + chip.cls}>{chip.text}</span>
               </>}
         </div>
 
         {t.ticket_steps.map(s => (
-          <div key={s.id} className={'step' + (s.status === 'done' ? ' done' : '')
-            + (overdue && !['done', 'na'].includes(s.status) ? ' late' : '')}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div className="num">{s.position}</div>
-              <div className="st">{s.label}</div>
-            </div>
-            <div className="ctl">
-              {ORDER.map(v => (
-                <button key={v} data-on={s.status === v ? '1' : '0'} onClick={() => onSet(s, v)}>
-                  {STATUS[v]}
-                </button>
-              ))}
-            </div>
-            {s.position === 2 && (
-              <select className="note" value={s.detail || ''}
-                onChange={e => onField(s, { detail: e.target.value })}>
-                {DEVICES.map(d => <option key={d}>{d}</option>)}
-              </select>
-            )}
-            <input className="note" defaultValue={s.note || ''}
-              placeholder="Note — asset tag, ticket ref, who is blocking"
-              onBlur={e => { if (e.target.value !== (s.note || '')) onField(s, { note: e.target.value }); }} />
-          </div>
+          <Step key={s.id} s={s} overdue={overdue} onSet={onSet} onField={onField}
+                onComment={onComment}
+                trail={events.filter(e => e.step_id === s.id)} />
         ))}
 
         <button className="btn ghost" style={{ marginTop: 16 }} onClick={onClose}>Close panel</button>
       </div>
     </div>
   );
+}
+
+/** One checklist step: status, device type, and its own comment trail. */
+function Step({ s, overdue, onSet, onField, onComment, trail }) {
+  const [text, setText] = useState('');
+  const [reason, setReason] = useState('');
+  const pending = !['done', 'na'].includes(s.status);
+
+  return (
+    <div className={'step' + (s.status === 'done' ? ' done' : '') + (overdue && pending ? ' late' : '')}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="num">{s.position}</div>
+        <div className="st">{s.label}</div>
+        {s.done_at && (
+          <span className="chip green" style={{ marginLeft: 'auto' }}>
+            Done {pretty(String(s.done_at).slice(0, 10))}
+          </span>
+        )}
+      </div>
+
+      <div className="ctl">
+        {ORDER.map(v => (
+          <button key={v} data-on={s.status === v ? '1' : '0'} onClick={() => onSet(s, v)}>
+            {STATUS[v]}
+          </button>
+        ))}
+      </div>
+
+      {s.position === 2 && (
+        <select className="note" value={s.detail || ''}
+          onChange={e => onField(s, { detail: e.target.value })}>
+          {DEVICES.map(d => <option key={d}>{d}</option>)}
+        </select>
+      )}
+
+      <div className="cmt">
+        <div className="cmt-row">
+          <select value={reason} onChange={e => setReason(e.target.value)}>
+            {REASONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+          <input value={text} placeholder="What happened? e.g. leased device requested, waiting on vendor"
+            onChange={e => setText(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { onComment(s, text, reason); setText(''); } }} />
+          <button className="mini" disabled={!text.trim()}
+            onClick={() => { onComment(s, text, reason); setText(''); }}>Log</button>
+        </div>
+
+        {trail.length > 0 && (
+          <div className="trail">
+            {trail.map(e => (
+              <div key={e.id} className="tr">
+                <span className={'dot ' + (e.kind === 'comment' ? 'cmt'
+                  : ['done', 'na'].includes(e.to_status) ? 'done' : '')} />
+                <span>
+                  {e.kind === 'comment'
+                    ? <>{e.comment}{e.reason && <> · <b>{REASON_LABEL[e.reason]}</b></>}</>
+                    : <>Moved to <b>{STATUS[e.to_status] || e.to_status}</b></>}
+                  <span className="who"> · {(e.actor || 'someone').split('@')[0]} · {when(e.created_at)}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Relative time, in the plainest words available. */
+function when(iso) {
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  const days = Math.round(hrs / 24);
+  return days === 1 ? 'yesterday' : days + 'd ago';
 }
