@@ -53,8 +53,9 @@ function Shell() {
               {!t.live && <div className="badges"><span className="chip grey">Coming later</span></div>}
             </>
           );
+          const cls = 'tile' + (t.chart ? ' chart' : '');
           return t.live
-            ? <a key={t.slug} className="tile" href={t.href}>{inner}</a>
+            ? <a key={t.slug} className={cls} href={t.href}>{inner}</a>
             : <div key={t.slug} className="tile soon">{inner}</div>;
         })}
       </div>
