@@ -234,10 +234,11 @@ function Tracker({ email }) {
         : <>
             <div className="stepchips">
               {byStep.map(g => (
-                <button key={g.position} className={'stepchip' + (g.people.length ? '' : ' empty')}
+                <button key={g.position}
+                  className={'stepchip c' + g.position + (g.people.length ? '' : ' empty')}
                   data-on={active && active.position === g.position ? '1' : '0'}
                   onClick={() => { setStepSel(g.position); setPicked({}); }}>
-                  {g.label}<span className="n">{g.people.length}</span>
+                  <span className="sq" />{g.label}<span className="n">{g.people.length}</span>
                 </button>
               ))}
             </div>
@@ -304,10 +305,9 @@ function Tracker({ email }) {
                     <div key={g.position} className="bar-row">
                       <span className="bar-lbl">{g.label}</span>
                       <span className="bar-track">
-                        <span className="bar-fill" style={{
+                        <span className={'bar-fill p' + g.position} style={{
                           width: busiest ? Math.round((g.people.length / busiest) * 100) + '%' : '0%',
-                          background: g.people.length >= 4 ? 'var(--rose)'
-                            : g.people.length ? 'var(--blue)' : 'transparent'
+                          background: g.people.length ? '' : 'transparent'
                         }} />
                       </span>
                       <span className="bar-n">{g.people.length}</span>
@@ -365,7 +365,9 @@ function Person({ t, pending, onSet, onOpen }) {
   const done = t.ticket_steps.filter(s => ['done', 'na'].includes(s.status)).length;
 
   return (
-    <div className={'pcard' + (overdue ? ' late' : '')}>
+    <div className={'pcard' + (overdue ? ' late' : '')} onClick={() => onOpen(t.id)}
+         role="button" tabIndex={0}
+         onKeyDown={e => { if (e.key === 'Enter') onOpen(t.id); }}>
       <div className="pc-top">
         <div>
           <div className="pc-name">
@@ -387,8 +389,9 @@ function Person({ t, pending, onSet, onOpen }) {
         <div className="runway">
           {t.ticket_steps.map(s => (
             <div key={s.id} title={`${s.label}: ${STATUS[s.status]}`}
-              className={'seg ' + (s.status === 'done' ? 'done' : s.status === 'na' ? 'na'
-                : s.status === 'progress' ? 'progress' : overdue ? 'late' : '')} />
+              className={'seg p' + s.position + ' ' + (s.status === 'done' ? 'done'
+                : s.status === 'na' ? 'na' : s.status === 'progress' ? 'progress'
+                : overdue ? 'late' : '')} />
           ))}
         </div>
       </div>
@@ -398,12 +401,12 @@ function Person({ t, pending, onSet, onOpen }) {
           ? <div className="allgood">All six steps complete</div>
           : pending.map(s => (
               <div key={s.id} className="pstep">
-                <span className="pnum">{s.position}</span>
+                <span className={'pnum p' + s.position}>{s.position}</span>
                 <span className="plabel">{s.label}</span>
                 <span className={'chip ' + (s.status === 'progress' ? 'amber' : 'grey')}>
                   {STATUS[s.status]}
                 </span>
-                <div className="pacts">
+                <div className="pacts" onClick={e => e.stopPropagation()}>
                   {s.status !== 'progress' &&
                     <button className="mini" onClick={() => onSet(s, 'progress')}>Start</button>}
                   <button className="mini go" onClick={() => onSet(s, 'done')}>Done</button>
@@ -416,7 +419,8 @@ function Person({ t, pending, onSet, onOpen }) {
         <span className="note-txt">
           {pending.length ? `${pending.length} of ${t.ticket_steps.length} still to do` : 'Nothing outstanding'}
         </span>
-        <button className="mini" style={{ marginLeft: 'auto' }} onClick={() => onOpen(t.id)}>
+        <button className="mini" style={{ marginLeft: 'auto' }}
+          onClick={e => { e.stopPropagation(); onOpen(t.id); }}>
           Open full ticket
         </button>
       </div>
@@ -472,9 +476,10 @@ function Step({ s, overdue, onSet, onField, onComment, trail }) {
   const pending = !['done', 'na'].includes(s.status);
 
   return (
-    <div className={'step' + (s.status === 'done' ? ' done' : '') + (overdue && pending ? ' late' : '')}>
+    <div className={'step e' + s.position + (s.status === 'done' ? ' done' : '')
+      + (overdue && pending ? ' late' : '')}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div className="num">{s.position}</div>
+        <div className={'num p' + s.position}>{s.position}</div>
         <div className="st">{s.label}</div>
         {s.done_at && (
           <span className="chip green" style={{ marginLeft: 'auto' }}>
