@@ -288,6 +288,34 @@ label{display:block;font-size:9.5px;font-weight:600;letter-spacing:.6px;text-tra
 .msub{font-size:11px;color:var(--ink3);font-weight:500;width:96px;text-align:right}
 .panelbox{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:17px 18px}
 .months{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+
+/* --------------------------------------------------------- sources */
+.locked{background:var(--emerald-soft);border:1px solid #B7E0CD;border-radius:10px;
+  padding:12px 15px;margin-bottom:20px;display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.locked b{font-size:12.5px;font-weight:600;color:var(--emerald);display:block}
+.locked span{font-size:11.5px;color:var(--emerald);opacity:.8;font-weight:500}
+.locked .tag{font:600 10px Inter;background:var(--emerald);color:#fff;border-radius:5px;
+  padding:4px 8px;letter-spacing:.3px;flex:none}
+
+.src{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);
+  border-radius:12px;padding:15px 16px;transition:all .17s var(--ease)}
+.src:hover{border-color:var(--blue);box-shadow:var(--shadow);transform:translateY(-1px)}
+.src-ico{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;
+  font:700 12px Inter;flex:none;letter-spacing:.3px}
+.src-ico.green{background:var(--s6-soft);color:var(--s6)}
+.src-ico.amber{background:var(--s2-soft);color:var(--s2)}
+.src-ico.accent{background:var(--s3-soft);color:var(--s3)}
+.src-ico.grey{background:var(--line2);color:var(--ink2)}
+.src-body{flex:1;min-width:180px}
+.src-name{font-size:14px;font-weight:700;letter-spacing:-.2px;display:flex;align-items:center;
+  gap:8px;flex-wrap:wrap}
+.src-desc{font-size:12.5px;color:var(--ink2);font-weight:500;line-height:1.5;margin-top:4px}
+.src-detail{font:500 11px Inter;color:var(--ink3);margin-top:7px;background:var(--sunk);
+  border:1px solid var(--line2);border-radius:6px;padding:5px 9px;display:inline-block;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.src-act{flex:none;margin-left:auto}
+@media(max-width:560px){.src{align-items:flex-start;flex-wrap:wrap}.src-act{margin-left:0;width:100%}}
+
 @media(max-width:560px){.wrap{padding:16px 13px 44px}.mlbl{width:100%}.bar-lbl{width:100%}}
 `;
 
