@@ -1,29 +1,62 @@
 /* Shell styles: tokens, typography, buttons, tiles, panels.
    Shared by every tile — change with care, it affects all of them. */
 export const commonCss = `
+/* ============================================================
+   THE PALETTE — everything colourful in the app comes from here.
+
+   Default is Clay: burnt sienna on warm paper, with deep teal,
+   aubergine, olive and steel as the supporting hues. Deliberately
+   not a corporate blue.
+
+   To try another, replace the four --accent lines and the six --s
+   lines with one of the sets at the bottom of this block. Nothing
+   else needs touching.
+   ============================================================ */
 :root{
-  --canvas:#FBF9F5; --surface:#FFFFFF; --sunk:#FAF7F2;
-  --line:#E8E2D8; --line2:#F2EDE4;
+  --canvas:#FBF9F5; --surface:#FFFFFF; --sunk:#F7F3EC;
+  --line:#E6DFD3; --line2:#F1EBE1;
 
-  --ink:#1C1917; --ink2:#57534E; --ink3:#8C8377;
+  --ink:#1F1B16; --ink2:#5A5348; --ink3:#8F8779;
 
-  --accent:#1D4ED8; --accent-ink:#1E3A8A; --accent-soft:#EAF0FE;
-  --emerald:#15803D; --emerald-soft:#EDF6EE;
-  --amber:#B45309;  --amber-soft:#FCF3E7;
-  --rose:#9F1239;   --rose-soft:#FBEDF0;
+  /* the one colour for things you can act on */
+  --accent:#B14A2E; --accent-ink:#8C3820; --accent-soft:#FAEDE7;
 
-  --s1:#1E40AF; --s1-soft:#ECF0FB;
-  --s2:#B45309; --s2-soft:#FCF3E7;
-  --s3:#5B21B6; --s3-soft:#F1ECFB;
-  --s4:#0F766E; --s4-soft:#E9F5F3;
-  --s5:#9D174D; --s5-soft:#FBECF1;
-  --s6:#15803D; --s6-soft:#EDF6EE;
+  /* status — these keep their meaning whatever the accent is */
+  --emerald:#3F6B3A; --emerald-soft:#EEF3EC;
+  --amber:#A66A15;   --amber-soft:#FBF2E4;
+  --rose:#9B2C36;    --rose-soft:#FAEBEC;
+
+  /* the six onboarding steps and the document categories */
+  --s1:#1F5F5B; --s1-soft:#E7F0EF;
+  --s2:#B14A2E; --s2-soft:#FAEDE7;
+  --s3:#6B2D5C; --s3-soft:#F4EBF2;
+  --s4:#4A6B22; --s4-soft:#EFF3E7;
+  --s5:#8C5A1E; --s5-soft:#F8F0E4;
+  --s6:#2E5E8C; --s6-soft:#E9EFF6;
 
   --font:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
   --r:5px; --r-lg:7px;
   --ease:cubic-bezier(.2,.8,.3,1);
 }
-*{box-sizing:border-box}
+
+/* ---- other palettes, swap in if Clay is not right ----------------
+
+   AUBERGINE — deep purple on paper, cooler and more formal
+   --accent:#6B2D5C; --accent-ink:#54234A; --accent-soft:#F4EBF2;
+   --s1:#6B2D5C; --s2:#1F5F5B; --s3:#8C5A1E; --s4:#2E5E8C; --s5:#9B2C36; --s6:#4A6B22;
+
+   FOREST — deep green, calm and quiet
+   --accent:#2F5D3A; --accent-ink:#254B2E; --accent-soft:#EAF1EC;
+   --s1:#2F5D3A; --s2:#8C5A1E; --s3:#1F5F5B; --s4:#6B2D5C; --s5:#B14A2E; --s6:#2E5E8C;
+
+   INK — near-black with a single copper highlight, most restrained
+   --accent:#2B2A28; --accent-ink:#000000; --accent-soft:#EFEDE9;
+   --s1:#8C5A1E; --s2:#2B2A28; --s3:#1F5F5B; --s4:#6B2D5C; --s5:#4A6B22; --s6:#9B2C36;
+
+   OCEAN — teal-led, brighter and more modern
+   --accent:#0E6E68; --accent-ink:#0A5450; --accent-soft:#E5F2F1;
+   --s1:#0E6E68; --s2:#B14A2E; --s3:#2E5E8C; --s4:#8C5A1E; --s5:#6B2D5C; --s6:#4A6B22;
+   ------------------------------------------------------------------ */*{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{background:var(--canvas);color:var(--ink);
   font-family:var(--font);
