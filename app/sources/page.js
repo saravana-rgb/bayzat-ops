@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { AuthGate, Bar, isAdmin, sources, supabase } from '../shared';
+import { AuthGate, Bar, supabase } from '../common/shared';
+import { isAdmin } from '../common/tiles';
+import { sources } from './shared';
 
 /* The list lives in shared.js under `sources` — add an entry there and it
    appears here, under whichever group you give it. */
