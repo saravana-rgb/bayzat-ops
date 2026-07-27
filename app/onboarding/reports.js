@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { supabase } from '../shared';
+import { supabase } from '../common/shared';
 
 /* What "on time" means here. Nothing enforces these — they only decide
    what the report calls good, so change them if they are wrong for you. */
