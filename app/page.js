@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { AuthGate, Bar, Icon, isAdmin, supabase, tiles } from './shared';
+import { AuthGate, Bar, Icon, supabase } from './common/shared';
+import { isAdmin, tiles } from './common/tiles';
 
 export default function Home() {
   return <AuthGate><Shell /></AuthGate>;
@@ -28,7 +29,7 @@ function Shell() {
     <div className="wrap">
       <Bar
         title="Bayzat Ops"
-        sub="Internal tools for the IT and People Ops"
+        sub="Internal tools for the IT and People teams"
         right={<>{email}<button className="mini" onClick={() => supabase.auth.signOut()}>Sign out</button></>}
       />
 
