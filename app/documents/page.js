@@ -300,13 +300,16 @@ function Upload({ onUpload }) {
 }
 
 function DocCard({ d, onOpen, onDownload, onDelete, onRestore, onReplace }) {
+  const left = d.status === 'deleted' && d.deleted_at
+    ? 15 - Math.floor((Date.now() - new Date(d.deleted_at)) / 864e5) : null;
   const chip = d.status === 'deleted'
-    ? { cls: 'red', text: 'Deleted' }
+    ? { cls: 'red', text: left > 1 ? `Gone in ${left} days`
+        : left === 1 ? 'Gone tomorrow' : 'Being removed' }
     : d.status === 'replaced' ? { cls: 'grey', text: 'Old version' }
     : expiryChip(d.expiry_date);
 
   return (
-    <div className={'doccard ' + d.category}>
+    <div className={'doccard ' + d.category + (d.status === 'deleted' ? ' deleted' : '')}>
       <div className="doc-top" onClick={onOpen}>
         <div className={'doc-ico ' + d.category}>
           {(d.mime_type || '').indexOf('pdf') > -1 ? 'PDF' : 'IMG'}
@@ -322,6 +325,12 @@ function DocCard({ d, onOpen, onDownload, onDelete, onRestore, onReplace }) {
             {d.expiry_date ? ' · expires ' + pretty(d.expiry_date) : ''}
             {d.size_bytes ? ' · ' + size(d.size_bytes) : ''}
           </div>
+          {d.status === 'deleted' && (
+            <div className="binline">
+              Deleted by {(d.deleted_by || 'someone').split('@')[0]} · kept for 15 days,
+              then removed for good. Restore it any time before then.
+            </div>
+          )}
           {d.ai_status === 'pending' && <span className="chip grey">Being read…</span>}
           {d.ai_status === 'failed' &&
             <span className="chip amber">Could not be read — add the dates by hand</span>}
