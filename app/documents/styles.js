@@ -71,4 +71,8 @@ export const documentsCss = `
 .btn.danger{background:var(--rose);border-color:var(--rose)}
 .btn.danger:hover{background:#7F2029;border-color:#7F2029}
 .btn.danger:disabled{background:var(--line);border-color:var(--line);color:var(--ink3)}
+
+.binline{font-size:11.5px;color:var(--rose);background:var(--rose-soft);border-radius:var(--r);
+  padding:8px 11px;margin-top:9px;line-height:1.55;display:inline-block}
+.doccard.deleted{border-left-color:var(--rose);background:#FFFDFD}
 `;
