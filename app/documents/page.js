@@ -84,6 +84,15 @@ function Repo({ email }) {
     load();
   }
 
+  /** Typing the number or dates by hand. Needed when Claude cannot read a
+   *  scan, and for correcting it when it misreads one. */
+  async function saveFields(doc, patch) {
+    const { error } = await supabase.from('company_documents').update(patch).eq('id', doc.id);
+    if (error) setError(error.message);
+    else { setBusy('Saved'); setTimeout(() => setBusy(''), 1500); }
+    load();
+  }
+
   async function remove(doc) {
     const reason = window.prompt(
       `Delete "${doc.title}"?\n\nsaravana@bayzat.com is told who deleted it. ` +
@@ -173,12 +182,65 @@ function Repo({ email }) {
 
       {detail && <Detail d={detail} events={events.filter(e => e.document_id === detail.id)}
                          onClose={() => setOpenId(null)} onShare={share}
-                         onDownload={() => download(detail)} />}
+                         onDownload={() => download(detail)} onSave={saveFields} />}
     </>
   );
 }
 
 /* ------------------------------------------------------------ pieces */
+/** The fields Claude fills in, and you can override. Saving writes straight
+ *  to the row, so a document whose scan cannot be read still gets reminders
+ *  as long as someone types the expiry date. */
+function Fields({ d, onSave }) {
+  const [num, setNum] = useState(d.doc_number || '');
+  const [issue, setIssue] = useState(d.issue_date || '');
+  const [expiry, setExpiry] = useState(d.expiry_date || '');
+  const [entity, setEntity] = useState(d.entity || '');
+
+  const changed = num !== (d.doc_number || '') || issue !== (d.issue_date || '')
+    || expiry !== (d.expiry_date || '') || entity !== (d.entity || '');
+
+  return (
+    <div className="fields">
+      <div className="frow">
+        <div>
+          <label>Number</label>
+          <input value={num} placeholder="CN-1234567" onChange={e => setNum(e.target.value)} />
+        </div>
+        <div>
+          <label>Entity</label>
+          <input value={entity} placeholder="Bayzat FZ-LLC"
+            onChange={e => setEntity(e.target.value)} />
+        </div>
+      </div>
+      <div className="frow">
+        <div>
+          <label>Issued</label>
+          <input type="date" value={issue} onChange={e => setIssue(e.target.value)} />
+        </div>
+        <div>
+          <label>Expires</label>
+          <input type="date" value={expiry} onChange={e => setExpiry(e.target.value)} />
+        </div>
+      </div>
+      <div className="frow" style={{ alignItems: 'center' }}>
+        <span className="note-txt">
+          {d.expiry_date
+            ? 'Reminders start 30 days before this date.'
+            : 'Add an expiry date and reminders start 30 days before it.'}
+        </span>
+        <button className="btn" disabled={!changed}
+          onClick={() => onSave(d, {
+            doc_number: num, entity,
+            issue_date: issue || null, expiry_date: expiry || null
+          })}>
+          {changed ? 'Save changes' : 'Saved'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const Stat = ({ n, l, c }) => (
   <div className={'stat' + (c ? ' ' + c : '')}><b>{n}</b><span>{l}</span></div>
 );
@@ -241,9 +303,11 @@ function DocCard({ d, onOpen, onDownload, onDelete, onRestore, onReplace }) {
     : expiryChip(d.expiry_date);
 
   return (
-    <div className="doccard">
+    <div className={'doccard ' + d.category}>
       <div className="doc-top" onClick={onOpen}>
-        <div className="doc-ico">{(d.mime_type || '').indexOf('pdf') > -1 ? 'PDF' : 'IMG'}</div>
+        <div className={'doc-ico ' + d.category}>
+          {(d.mime_type || '').indexOf('pdf') > -1 ? 'PDF' : 'IMG'}
+        </div>
         <div style={{ flex: 1, minWidth: 160 }}>
           <div className="doc-name">
             {d.title}
@@ -297,7 +361,7 @@ function Replace({ doc, onCancel, onPick }) {
   );
 }
 
-function Detail({ d, events, onClose, onShare, onDownload }) {
+function Detail({ d, events, onClose, onShare, onDownload, onSave }) {
   const [to, setTo] = useState('');
   const [msg, setMsg] = useState('');
   const chip = expiryChip(d.expiry_date);
@@ -325,15 +389,7 @@ function Detail({ d, events, onClose, onShare, onDownload }) {
 
         {d.ai_summary && <p className="ai-note">{d.ai_summary}</p>}
 
-        <table className="kv">
-          <tbody>
-            <tr><td>Number</td><td>{d.doc_number || '—'}</td></tr>
-            <tr><td>Issued</td><td>{pretty(d.issue_date)}</td></tr>
-            <tr><td>Expires</td><td>{pretty(d.expiry_date)}</td></tr>
-            <tr><td>File</td><td>{d.file_name} {d.size_bytes ? `· ${size(d.size_bytes)}` : ''}</td></tr>
-            <tr><td>Added by</td><td>{d.uploaded_by || '—'}</td></tr>
-          </tbody>
-        </table>
+        <Fields d={d} onSave={onSave} />
 
         <button className="btn" style={{ marginTop: 18 }} onClick={onDownload}>Download</button>
 
