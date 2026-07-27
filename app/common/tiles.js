@@ -60,7 +60,3 @@ export const tiles = [
     live: false
   }
 ];
-
-/* --------------------------------------------------------- sources */
-// Where everything actually lives. Grouped by tile, so as tiles are added
-// their sources sit under their own heading.
