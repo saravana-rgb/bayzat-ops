@@ -85,8 +85,18 @@ h1,h2,h3,p{margin:0}
   transition:border-color .18s var(--ease)}
 .tile:hover{border-color:var(--ink3)}
 .tile .badges{margin-top:auto;padding-top:16px}
-.tile .ico{width:34px;height:34px;border-radius:var(--r);background:var(--accent-soft);color:var(--accent);
-  display:grid;place-items:center;margin-bottom:18px;border:1px solid var(--line)}
+.tile{border-top:3px solid var(--accent)}
+.tile:nth-child(1){border-top-color:var(--s2)}
+.tile:nth-child(2){border-top-color:var(--s1)}
+.tile:nth-child(3){border-top-color:var(--s3)}
+.tile:nth-child(4){border-top-color:var(--s4)}
+.tile .ico{width:34px;height:34px;border-radius:var(--r);background:var(--accent-soft);
+  color:var(--accent);display:grid;place-items:center;margin-bottom:18px;
+  border:1px solid transparent}
+.tile:nth-child(1) .ico{background:var(--s2-soft);color:var(--s2)}
+.tile:nth-child(2) .ico{background:var(--s1-soft);color:var(--s1)}
+.tile:nth-child(3) .ico{background:var(--s3-soft);color:var(--s3)}
+.tile:nth-child(4) .ico{background:var(--s4-soft);color:var(--s4)}
 .tile:hover .ico{background:var(--accent);color:#fff;border-color:var(--accent)}
 .tile .ico.violet{background:var(--s3-soft);color:var(--s3);border-color:transparent}
 .tile .ico.emerald{background:var(--s6-soft);color:var(--s6);border-color:transparent}
@@ -110,19 +120,35 @@ h1,h2,h3,p{margin:0}
 /* ---------------------------------------------------------- stats */
 .stats{display:flex;gap:0;flex-wrap:wrap;margin-bottom:30px;border:1px solid var(--line);
   border-radius:var(--r-lg);background:var(--surface);overflow:hidden}
-.stat{padding:18px 24px;min-width:130px;flex:1;border-right:1px solid var(--line)}
+.stat{padding:18px 24px;min-width:130px;flex:1;border-right:1px solid var(--line);
+  position:relative}
 .stat:last-child{border-right:0}
+/* each counter takes the next hue, so a row of numbers reads as a row of
+   distinct things rather than a wall of grey */
+.stat::before{content:'';position:absolute;left:0;right:0;top:0;height:3px}
+.stat:nth-child(1)::before{background:var(--s1)}
+.stat:nth-child(2)::before{background:var(--s2)}
+.stat:nth-child(3)::before{background:var(--s3)}
+.stat:nth-child(4)::before{background:var(--s4)}
+.stat:nth-child(5)::before{background:var(--s5)}
+.stat:nth-child(1) b{color:var(--s1)} .stat:nth-child(2) b{color:var(--s2)}
+.stat:nth-child(3) b{color:var(--s3)} .stat:nth-child(4) b{color:var(--s4)}
+.stat:nth-child(5) b{color:var(--s5)}
 .stat b{display:block;font-size:26px;font-weight:600;line-height:1.05;letter-spacing:-.9px;
   color:var(--accent-ink)}
 .stat span{font-size:11px;color:var(--ink3);letter-spacing:.2px;font-weight:400;margin-top:6px;
   display:block}
-.stat.hot b{color:var(--rose)} .stat.warm b{color:var(--amber)}
-.stat.good b{color:var(--emerald)} .stat.calm b{color:var(--accent)}
+.stat.hot::before{background:var(--rose)}   .stat.hot b{color:var(--rose)}
+.stat.warm::before{background:var(--amber)} .stat.warm b{color:var(--amber)}
+.stat.good::before{background:var(--emerald)} .stat.good b{color:var(--emerald)}
+.stat.calm::before{background:var(--accent)}  .stat.calm b{color:var(--accent)}
 
 /* -------------------------------------------------------- headings */
 .sec{font-size:12.5px;font-weight:600;letter-spacing:0;color:var(--ink);
   margin:34px 0 14px;display:flex;align-items:center;gap:10px;text-transform:none}
+.sec::before{content:'';width:8px;height:8px;border-radius:2px;background:var(--accent);flex:none}
 .sec::after{content:'';flex:1;height:1px;background:var(--line)}
+.sec.hot::before{background:var(--rose)}
 .sec.hot{color:var(--rose)}
 .grid{display:grid;gap:14px}
 
