@@ -41,19 +41,10 @@ export const tiles = [
   {
     slug: 'onboarding',
     name: 'Onboarding',
-    blurb: 'Every new joiner and the six IT steps they are still waiting on.',
+    blurb: 'New joiners, the six IT steps they need, and the monthly report.',
     href: '/onboarding',
     icon: 'onboarding',
     live: true
-  },
-  {
-    slug: 'reports',
-    name: 'Reports',
-    blurb: 'How long each step takes, month by month, and what held it up.',
-    href: '/reports',
-    icon: 'reports',
-    live: true,
-    tone: 'violet'
   },
   {
     slug: 'sources',
