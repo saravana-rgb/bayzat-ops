@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { AuthGate, Bar, STATUS, ageChip, daysSince, pretty, supabase } from '../shared';
+import { AuthGate, Bar, supabase } from '../common/shared';
+import { STATUS, ageChip, daysSince, pretty } from './shared';
 import Reports from './reports';
 
 const ORDER = ['todo', 'progress', 'done', 'na'];
