@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { AuthGate, Bar, STATUS, ageChip, daysSince, pretty, supabase } from '../shared';
+import Reports from './reports';
 
 const ORDER = ['todo', 'progress', 'done', 'na'];
 const DEVICES = ['Company laptop', 'Leasing device', 'Personal device', 'Not required'];
@@ -26,6 +27,7 @@ export default function OnboardingPage() {
 
 function Shell() {
   const [email, setEmail] = useState('');
+  const [view, setView] = useState('board');
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email || ''));
   }, []);
@@ -33,10 +35,17 @@ function Shell() {
     <div className="wrap">
       <Bar
         title="Onboarding"
-        sub="Who is joining and what IT still owes them"
+        sub={view === 'board' ? 'Who is joining and what IT still owes them'
+                              : 'How long each step took, and what held it up'}
         right={<a className="back" href="/">← All tiles</a>}
       />
-      <Tracker email={email} />
+
+      <div className="viewswitch">
+        <button data-on={view === 'board' ? '1' : '0'} onClick={() => setView('board')}>Board</button>
+        <button data-on={view === 'reports' ? '1' : '0'} onClick={() => setView('reports')}>Reports</button>
+      </div>
+
+      {view === 'board' ? <Tracker email={email} /> : <Reports />}
     </div>
   );
 }
