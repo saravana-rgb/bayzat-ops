@@ -32,6 +32,7 @@ function Repo({ email }) {
   const [tab, setTab] = useState('all');
   const [openId, setOpenId] = useState(null);
   const [replacing, setReplacing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
   const fileRef = useRef(null);
 
   const load = useCallback(async () => {
@@ -93,15 +94,12 @@ function Repo({ email }) {
     load();
   }
 
-  async function remove(doc) {
-    const reason = window.prompt(
-      `Delete "${doc.title}"?\n\nsaravana@bayzat.com is told who deleted it. ` +
-      `Nothing is lost — it can be restored.\n\nWhy are you deleting it?`);
-    if (reason === null) return;
+  async function remove(doc, reason) {
     const { error } = await supabase.rpc('delete_document', {
       p_id: doc.id, p_actor: email, p_reason: reason
     });
     if (error) setError(error.message);
+    setDeleting(null);
     load();
   }
 
@@ -166,13 +164,18 @@ function Repo({ email }) {
                 <div className="grid">
                   {group.map(d => (
                     <DocCard key={d.id} d={d} onOpen={() => setOpenId(d.id)}
-                      onDownload={() => download(d)} onDelete={() => remove(d)}
+                      onDownload={() => download(d)} onDelete={() => setDeleting(d)}
                       onRestore={() => restore(d)} onReplace={() => setReplacing(d)} />
                   ))}
                 </div>
               </div>
             );
           })}
+
+      {deleting && (
+        <ConfirmDelete doc={deleting} onCancel={() => setDeleting(null)}
+          onConfirm={reason => remove(deleting, reason)} />
+      )}
 
       {replacing && (
         <Replace doc={replacing} onCancel={() => setReplacing(null)}
@@ -334,6 +337,62 @@ function DocCard({ d, onOpen, onDownload, onDelete, onRestore, onReplace }) {
           : <button className="mini danger" style={{ marginLeft: 'auto' }} onClick={onDelete}>
               Delete
             </button>}
+      </div>
+    </div>
+  );
+}
+
+/** Deleting is reversible and always reported, so the dialog says so plainly
+ *  rather than trying to frighten anyone out of it. A reason is required
+ *  because the email is far more useful with one. */
+function ConfirmDelete({ doc, onCancel, onConfirm }) {
+  const [reason, setReason] = useState('');
+  const [note, setNote] = useState('');
+  const REASONS = [
+    'Duplicate of another document',
+    'Replaced outside the app',
+    'Uploaded by mistake',
+    'No longer needed',
+    'Something else'
+  ];
+  const full = reason + (note.trim() ? ' — ' + note.trim() : '');
+
+  return (
+    <div className="veil" onClick={e => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div className="panel confirm">
+        <div className="confirm-head">
+          <span className={'doc-ico ' + doc.category}>
+            {(doc.mime_type || '').indexOf('pdf') > -1 ? 'PDF' : 'IMG'}
+          </span>
+          <div>
+            <h2>Delete this document?</h2>
+            <p>{doc.title} <span className="pc-ref">{doc.ref}</span></p>
+          </div>
+        </div>
+
+        <ul className="confirm-facts">
+          <li><b>It can be restored.</b> The file stays in storage and reappears under History.</li>
+          <li><b>saravana@bayzat.com is told</b> who deleted it, when, and why.</li>
+          <li><b>Expiry reminders stop</b> for this document once it is gone.</li>
+        </ul>
+
+        <label>Why are you deleting it?</label>
+        <div className="reasons">
+          {REASONS.map(r => (
+            <button key={r} className="reason" data-on={reason === r ? '1' : '0'}
+              onClick={() => setReason(r)}>{r}</button>
+          ))}
+        </div>
+
+        <input className="note" value={note} placeholder="Anything worth adding (optional)"
+          onChange={e => setNote(e.target.value)} />
+
+        <div className="confirm-acts">
+          <button className="btn ghost" onClick={onCancel}>Keep it</button>
+          <button className="btn danger" disabled={!reason} onClick={() => onConfirm(full)}>
+            {reason ? 'Delete document' : 'Pick a reason first'}
+          </button>
+        </div>
       </div>
     </div>
   );
