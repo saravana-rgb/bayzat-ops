@@ -120,4 +120,7 @@ button.col:disabled{cursor:default;opacity:.6}
 .formacts{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px;padding-top:16px;
   border-top:1px solid var(--line2)}
 .formacts .btn{flex:1;min-width:120px}
+
+.fnotice{font-size:12.5px;color:var(--s2);background:var(--s2-soft);border-radius:var(--r);
+  padding:10px 13px;margin-bottom:14px;line-height:1.6}
 `;
