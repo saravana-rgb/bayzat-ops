@@ -222,7 +222,7 @@ function Board({ email }) {
       {blocking && <BlockDialog step={blocking} onCancel={() => setBlocking(null)}
                                 onConfirm={block} />}
       {detail && <Detail l={detail} events={events.filter(e => e.leaver_id === detail.id)}
-                         evidence={evidence.filter(e => e.leaver_id === detail.id)}
+                         evidence={evidence.filter(e => e.leaver_id === detail.id)} actor={email}
                          onClose={() => setOpenId(null)} onSet={setStep} onNote={setNote}
                          onCancel={cancel} onEvidence={addEvidence} onOpenEvidence={openEvidence} />}
     </>
@@ -406,9 +406,9 @@ function StartDialog({ employee, onCancel, onConfirm }) {
 }
 
 /** One step: what it is, how to do it, what proves it was done. */
-function Step({ s, leaver, evidence, onSet, onNote, onEvidence, onOpenEvidence }) {
-  const [url, setUrl] = useState('');
+function Step({ s, leaver, evidence, actor, onSet, onNote, onEvidence, onOpenEvidence }) {
   const [text, setText] = useState('');
+  const [adding, setAdding] = useState(false);
   const fileRef = useRef(null);
   const guide = GUIDES[s.position] || {};
   const needs = EVIDENCE_REQUIRED.includes(s.position);
@@ -439,7 +439,7 @@ function Step({ s, leaver, evidence, onSet, onNote, onEvidence, onOpenEvidence }
         {s.position === 5 && (
           <button className="mini" onClick={() => {
             const w = window.open('', '_blank');
-            w.document.write(receiptHtml(leaver));
+            w.document.write(receiptHtml(leaver, leaver.steps, actor));
             w.document.close();
             w.print();
           }}>Print the handover form</button>
@@ -462,10 +462,12 @@ function Step({ s, leaver, evidence, onSet, onNote, onEvidence, onOpenEvidence }
 
       <div className="evidence">
         <div className="evhead">
-          Evidence
-          {needs && <span className="evneed">
-            {guide.evidence || 'Required before this step can close'}
+          <span className="evtitle">Evidence</span>
+          {needs && <span className={'chip ' + (evidence.length ? 'green' : 'amber')}>
+            {evidence.length ? 'Attached' : 'Needed to close this'}
           </span>}
+          {needs && !evidence.length && guide.evidence &&
+            <span className="evneed">{guide.evidence}</span>}
         </div>
 
         {evidence.length > 0 && (
@@ -492,18 +494,33 @@ function Step({ s, leaver, evidence, onSet, onNote, onEvidence, onOpenEvidence }
             e.target.value = ''; setText('');
           }} />
 
-        <div className="evadd">
-          <button className="mini" onClick={() => fileRef.current?.click()}>
-            Attach a photo or file
-          </button>
-          <input value={url} placeholder="or paste a link"
-            onChange={e => setUrl(e.target.value)} />
-          <input value={text} placeholder="or write what was done"
-            onChange={e => setText(e.target.value)} />
-          <button className="mini go" disabled={!url.trim() && !text.trim()}
-            onClick={() => { onEvidence(s, { url: url.trim(), note: text.trim() });
-                             setUrl(''); setText(''); }}>Add</button>
-        </div>
+        {adding
+          ? <div className="evadd">
+              <input autoFocus value={text} placeholder="What was done, or paste a link"
+                onChange={e => setText(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && text.trim()) {
+                  const isLink = /^https?:\/\//i.test(text.trim());
+                  onEvidence(s, isLink ? { url: text.trim() } : { note: text.trim() });
+                  setText(''); setAdding(false);
+                } }} />
+              <button className="mini go" disabled={!text.trim()}
+                onClick={() => {
+                  const isLink = /^https?:\/\//i.test(text.trim());
+                  onEvidence(s, isLink ? { url: text.trim() } : { note: text.trim() });
+                  setText(''); setAdding(false);
+                }}>Save</button>
+              <button className="mini" onClick={() => { setAdding(false); setText(''); }}>
+                Cancel
+              </button>
+            </div>
+          : <div className="evadd">
+              <button className="mini" onClick={() => fileRef.current?.click()}>
+                Attach a photo or file
+              </button>
+              <button className="mini" onClick={() => setAdding(true)}>
+                Add a note or link
+              </button>
+            </div>}
       </div>
     </div>
   );
@@ -540,7 +557,7 @@ function BlockDialog({ step, onCancel, onConfirm }) {
   );
 }
 
-function Detail({ l, events, evidence, onClose, onSet, onNote, onCancel,
+function Detail({ l, events, evidence, actor, onClose, onSet, onNote, onCancel,
                  onEvidence, onOpenEvidence }) {
   const [cancelling, setCancelling] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -579,7 +596,7 @@ function Detail({ l, events, evidence, onClose, onSet, onNote, onCancel,
         </div>
 
         {l.steps.map(s => (
-          <Step key={s.id} s={s} leaver={l}
+          <Step key={s.id} s={s} leaver={l} actor={actor}
                 evidence={evidence.filter(x => x.step_id === s.id)}
                 onSet={onSet} onNote={onNote}
                 onEvidence={onEvidence} onOpenEvidence={onOpenEvidence} />
