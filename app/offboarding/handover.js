@@ -41,14 +41,25 @@ export default function Handover({ leaver, actor, onClose, onSaved }) {
   const [deviceType, setDeviceType] = useState(leaver.asset_type || '');
 
   useEffect(() => {
+    const blank = {
+      collection_date: today(), collected_by: (actor || '').split('@')[0],
+      method: 'in_person', serial_seen: ''
+    };
     supabase.from('leaver_handover').select('*').eq('leaver_id', leaver.id).maybeSingle()
-      .then(({ data }) => setForm(data || {
-        collection_date: today(), collected_by: (actor || '').split('@')[0],
-        method: 'in_person', serial_seen: ''
-      }));
+      .then(({ data, error }) => {
+        // never leave the form stuck loading — open it blank and say what went
+        // wrong, rather than a button that appears to do nothing
+        if (error) setMsg('Could not load a saved form: ' + error.message);
+        setForm(data || blank);
+      })
+      .catch(err => { setMsg('Could not load a saved form: ' + err.message); setForm(blank); });
   }, [leaver.id, actor]);
 
-  if (!form) return null;
+  if (!form) return (
+    <div className="veil" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="panel form"><p className="note-txt">Opening the form…</p></div>
+    </div>
+  );
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   async function save(quiet) {
