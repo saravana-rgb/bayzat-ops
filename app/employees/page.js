@@ -48,6 +48,7 @@ function Directory({ email }) {
   const [page, setPage] = useState(0);
   const [openId, setOpenId] = useState(null);
   const [saved, setSaved] = useState('');
+  const [deleting, setDeleting] = useState(null);
 
   const load = useCallback(async () => {
     const { data, error } = await supabase.from('employees').select('*');
@@ -69,6 +70,24 @@ function Directory({ email }) {
   }, []);
 
   useEffect(() => { setPage(0); }, [q, scope, facet, sort, gapFilter]);
+
+  async function remove(person, reason) {
+    const { data, error } = await supabase.rpc('delete_employee', {
+      p_id: person.id, p_actor: email, p_reason: reason });
+    if (error) { setError(error.message); return; }
+    if (data && data.ok === false) { setError(data.reason || 'Could not delete'); return; }
+    setDeleting(null); setOpenId(null); setSaved('Removed');
+    setTimeout(() => setSaved(''), 1600);
+    load();
+  }
+
+  async function restore(person) {
+    const { error } = await supabase.rpc('restore_employee', {
+      p_id: person.id, p_actor: email });
+    if (error) setError(error.message);
+    else { setSaved('Restored'); setTimeout(() => setSaved(''), 1600); }
+    load();
+  }
 
   async function save(id, patch) {
     const { error } = await supabase.from('employees')
@@ -96,6 +115,8 @@ function Directory({ email }) {
   let list = withMissing.filter(e => {
     if (scope === 'active'  && e.status !== 'active') return false;
     if (scope === 'leavers' && e.status !== 'leaver') return false;
+    if (scope === 'bin'     && e.status !== 'deleted') return false;
+    if (scope !== 'bin'     && e.status === 'deleted') return false;
     if (scope === 'gaps'    && (e.status !== 'active' || !e._missing.length)) return false;
     if (facet.key && (e[facet.key] || '') !== facet.value) return false;
     const m = e._missing.length;
@@ -154,7 +175,8 @@ function Directory({ email }) {
         <div className="tabset">
           {[['active', 'Everyone', active.length],
             ['gaps', 'Needs attention', gaps.length],
-            ['leavers', 'Leavers', withMissing.filter(e => e.status === 'leaver').length]]
+            ['leavers', 'Leavers', withMissing.filter(e => e.status === 'leaver').length],
+            ['bin', 'Removed', withMissing.filter(e => e.status === 'deleted').length]]
             .map(([k, l, n]) => (
             <button key={k} data-on={scope === k ? '1' : '0'}
               onClick={() => { setScope(k); setFacet({ key: '', value: '' }); }}>
@@ -226,7 +248,9 @@ function Directory({ email }) {
                     : <span className="chip red">No device</span>}
                 </span>
                 <span className="gapcount">
-                  {e._missing.length
+                  {e.status === 'deleted'
+                    ? <span className="chip grey">Removed</span>
+                    : e._missing.length
                     ? <span className="chip red">{e._missing.length} missing</span>
                     : <span className="chip green">Complete</span>}
                 </span>
@@ -238,12 +262,69 @@ function Directory({ email }) {
         <Pager page={page} perPage={PER_PAGE} total={list.length} onPage={setPage} />
       )}
 
-      {open && <Drawer e={open} facets={facets} onClose={() => setOpenId(null)} onSave={save} />}
+      {open && <Drawer e={open} facets={facets} onClose={() => setOpenId(null)} onSave={save}
+                       onDelete={() => setDeleting(open)} onRestore={() => restore(open)} />}
+
+      {deleting && <ConfirmRemove person={deleting} onCancel={() => setDeleting(null)}
+                                  onConfirm={reason => remove(deleting, reason)} />}
     </>
   );
 }
 
 /* ------------------------------------------------------------ pieces */
+/** Removing someone is rare, so the dialog spends its words on making sure
+ *  it is the right action rather than hurrying you through it. */
+function ConfirmRemove({ person, onCancel, onConfirm }) {
+  const [reason, setReason] = useState('');
+  const [note, setNote] = useState('');
+  const REASONS = [
+    'Duplicate record',
+    'Created by mistake',
+    'They never joined',
+    'Test entry',
+    'Something else'
+  ];
+  const full = reason + (note.trim() ? ' — ' + note.trim() : '');
+
+  return (
+    <div className="veil" onClick={e => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div className="panel confirm">
+        <div className="confirm-head">
+          <span className="ini big">{initials(person)}</span>
+          <div>
+            <h2>Remove {fullName(person)}?</h2>
+            <p>{person.title || 'no title'}{person.department ? ' · ' + person.department : ''}</p>
+          </div>
+        </div>
+
+        <ul className="confirm-facts">
+          <li><b>If they have left the company, do not use this.</b> Mark them as a leaver
+            instead — offboarding, payroll and asset return all need the record.</li>
+          <li><b>Nothing is destroyed.</b> The record moves to Removed and can be put back.</li>
+          <li><b>Your name is recorded</b> against the removal, along with the reason.</li>
+        </ul>
+
+        <label>Why is this record being removed?</label>
+        <div className="reasons">
+          {REASONS.map(r => (
+            <button key={r} className="reason" data-on={reason === r ? '1' : '0'}
+              onClick={() => setReason(r)}>{r}</button>
+          ))}
+        </div>
+        <input className="note" value={note} placeholder="Anything worth adding (optional)"
+          onChange={e => setNote(e.target.value)} />
+
+        <div className="confirm-acts">
+          <button className="btn ghost" onClick={onCancel}>Keep it</button>
+          <button className="btn danger" disabled={!reason} onClick={() => onConfirm(full)}>
+            {reason ? 'Remove record' : 'Pick a reason first'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Pages of 25. Shows a window of five page numbers so 240 people do not
  *  produce a row of ten buttons. */
 function Pager({ page, perPage, total, onPage }) {
@@ -284,7 +365,7 @@ const Stat = ({ n, l, c }) => (
 
 /** Everything about one person, editable in place. Required fields that are
  *  empty are outlined red, so what needs doing is visible without reading. */
-function Drawer({ e, facets, onClose, onSave }) {
+function Drawer({ e, facets, onClose, onSave, onDelete, onRestore }) {
   const [form, setForm] = useState(e);
   const [busy, setBusy] = useState(false);
   useEffect(() => { setForm(e); }, [e]);
@@ -335,7 +416,7 @@ function Drawer({ e, facets, onClose, onSave }) {
                 const empty = f.req && !String(form[f.k] ?? '').trim();
                 return (
                   <div key={f.k} className={'field' + (f.wide ? ' wide' : '')}>
-                    <label>{f.l}{f.req && <i className="req">required</i>}</label>
+                    <label>{f.l}{f.req && <i className="req" title="Required">*</i>}</label>
                     {f.type === 'select'
                       ? <select className={empty ? 'gap' : ''} value={form[f.k] || ''}
                           onChange={ev => set(f.k, ev.target.value)}>
@@ -358,6 +439,34 @@ function Drawer({ e, facets, onClose, onSave }) {
             </div>
           </div>
         ))}
+
+        {e.status === 'deleted'
+          ? <>
+              <div className="sec">This record was removed</div>
+              <div className="danger-zone">
+                <div>
+                  <b>Removed by {(e.deleted_by || 'someone').split('@')[0]}</b>
+                  <span>{e.delete_reason || 'No reason recorded'} — it is hidden from the
+                    directory and every count, but nothing has been destroyed.</span>
+                </div>
+                <button className="mini go" onClick={onRestore}>Put it back</button>
+              </div>
+            </>
+          : <>
+              <div className="sec">Removing this record</div>
+              <div className="danger-zone">
+                <div>
+                  <b>Remove this record</b>
+                  <span>
+                    For duplicates, test entries and people who never joined — not for
+                    someone who has left. Mark a leaver as a leaver instead, so offboarding
+                    and payroll still have their record. Removing hides the record and keeps
+                    a note of who did it and why.
+                  </span>
+                </div>
+                <button className="mini danger" onClick={onDelete}>Remove…</button>
+              </div>
+            </>}
 
         <div className="drawer-acts">
           <button className="btn ghost" onClick={onClose}>Close</button>
