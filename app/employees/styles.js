@@ -1,0 +1,56 @@
+/* Styles owned by the Employees tile. Nothing else uses these. */
+export const employeesCss = `
+.facets{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+.facetsel,.sortsel{width:auto;min-width:150px;font-size:12.5px;padding:8px 11px}
+.sortsel{min-width:140px}
+.facets .count{margin-left:auto;font:400 12px var(--font);color:var(--ink3)}
+
+/* the list */
+.people{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
+  border-radius:var(--r-lg);overflow:hidden}
+.person{display:flex;align-items:center;gap:14px;background:var(--surface);border:0;
+  border-left:3px solid transparent;padding:13px 16px;cursor:pointer;text-align:left;
+  width:100%;font-family:var(--font);transition:background .12s var(--ease)}
+.person:hover{background:var(--sunk)}
+.person.gap{border-left-color:var(--rose)}
+.person .ini{width:34px;height:34px;border-radius:50%;background:var(--accent-soft);
+  color:var(--accent);display:grid;place-items:center;font:600 12px var(--font);flex:none}
+.person .ini.left{background:var(--line2);color:var(--ink3)}
+.who{flex:1;min-width:150px;display:grid;gap:3px}
+.who .nm{font-size:14px;font-weight:600;color:var(--ink);display:flex;align-items:center;
+  gap:8px;flex-wrap:wrap}
+.who .sub{font-size:12px;color:var(--ink3)}
+.person .col{width:130px;flex:none;font-size:12.5px;color:var(--ink2)}
+.person .asset{width:130px;flex:none}
+.person .gapcount{width:104px;flex:none;text-align:right}
+
+/* device colours, matching the document categories */
+.chip.a-bayzat{background:var(--s1-soft);color:var(--s1)}
+.chip.a-leasing{background:var(--s3-soft);color:var(--s3)}
+.chip.a-personal{background:var(--s5-soft);color:var(--s5)}
+.chip.a-none{background:var(--line2);color:var(--ink3)}
+
+/* the drawer */
+.panel.wide{max-width:760px}
+.ini.big{width:46px;height:46px;border-radius:50%;background:var(--accent-soft);
+  color:var(--accent);display:grid;place-items:center;font:600 16px var(--font);flex:none}
+.drawer-sub{font-size:12.5px;color:var(--ink3);margin-top:5px}
+.drawer-flags{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 4px}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+.field.wide{grid-column:1/-1}
+.field label{display:flex;align-items:center;gap:8px}
+.field .req{font-style:normal;font-size:9.5px;font-weight:500;color:var(--rose);
+  background:var(--rose-soft);border-radius:3px;padding:2px 6px;text-transform:none;
+  letter-spacing:0}
+.field input.gap,.field select.gap{border-color:var(--rose);background:var(--rose-soft)}
+.field input.gap:focus,.field select.gap:focus{border-color:var(--rose);background:var(--surface)}
+.drawer-acts{display:flex;gap:10px;margin-top:26px;padding-top:20px;
+  border-top:1px solid var(--line2);flex-wrap:wrap}
+.drawer-acts .btn{flex:1;min-width:150px}
+
+@media(max-width:820px){
+  .hide-sm{display:none}
+  .person .asset{width:auto}
+  .person .gapcount{width:auto}
+}
+`;
