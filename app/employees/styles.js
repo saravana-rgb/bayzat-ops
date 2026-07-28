@@ -64,4 +64,38 @@ export const employeesCss = `
 /* reports */
 .splitcols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:28px}
 .bt{font:600 12.5px var(--font);color:var(--ink);margin:0 0 12px}
+
+/* record health */
+.health{display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap}
+.ring{flex:none}
+.healthside{flex:1;min-width:260px}
+.hlead{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.fieldgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px;
+  margin-top:16px}
+.fcard{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);
+  padding:12px 13px;text-align:left;cursor:pointer;font-family:var(--font);
+  transition:all .15s var(--ease);display:grid;gap:5px}
+.fcard:hover:not(:disabled){border-color:var(--ink3);transform:translateY(-1px)}
+.fcard:disabled{cursor:default;opacity:.75}
+.fnum{font:600 20px var(--font);line-height:1}
+.flabel{font:400 11.5px var(--font);color:var(--ink3)}
+.fbar{display:block;height:3px;background:var(--line2);border-radius:2px;overflow:hidden}
+.fbar span{display:block;height:3px;border-radius:2px}
+.fcard.ok .fnum{color:var(--emerald)}   .fcard.ok .fbar span{background:var(--emerald)}
+.fcard.warn .fnum{color:var(--amber)}   .fcard.warn .fbar span{background:var(--amber)}
+.fcard.bad .fnum{color:var(--rose)}     .fcard.bad .fbar span{background:var(--rose)}
+
+/* clickable chart rows and columns */
+.bar-row.clickable{width:100%;border:0;background:transparent;cursor:pointer;
+  font-family:var(--font);border-radius:var(--r);padding:6px 8px;margin-left:-8px;
+  transition:background .12s var(--ease)}
+.bar-row.clickable:hover{background:var(--sunk)}
+button.col{border:0;font-family:var(--font)}
+button.col:disabled{cursor:default;opacity:.6}
+
+/* who is behind a number */
+.drilllist{margin-top:16px;display:grid;gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:var(--r);overflow:hidden;max-height:52vh;
+  overflow-y:auto}
+.drillrow{display:flex;align-items:center;gap:13px;background:var(--surface);padding:11px 14px}
 `;
