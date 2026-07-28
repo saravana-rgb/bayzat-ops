@@ -49,27 +49,28 @@ button.col:disabled{cursor:default;opacity:.6}
 
 @media(max-width:820px){.hide-sm{display:none}}
 
-.guide{font-size:12.5px;color:var(--ink3);line-height:1.6;margin-top:9px}
+.guide{font-size:12.5px;color:var(--ink3);line-height:1.6;margin-top:8px}
 .guiderow{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
-.guiderow a.mini{text-decoration:none;display:inline-block}
+.guiderow a.mini{text-decoration:none;display:inline-flex;align-items:center}
 
-.evidence{margin-top:14px;border-top:1px solid var(--line2);padding-top:13px}
-.evhead{font:600 11.5px var(--font);color:var(--ink2);display:flex;gap:10px;
-  align-items:baseline;flex-wrap:wrap;margin-bottom:10px}
-.evneed{font:400 11.5px var(--font);color:var(--amber)}
-.evlist{display:grid;gap:6px;margin-bottom:11px}
-.evitem{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+.evidence{margin-top:13px;border-top:1px solid var(--line2);padding-top:12px}
+.evhead{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:9px}
+.evtitle{font:600 11px var(--font);letter-spacing:.4px;text-transform:uppercase;
+  color:var(--ink3)}
+.evneed{font:400 11.5px var(--font);color:var(--ink3);flex-basis:100%}
+.evlist{display:grid;gap:5px;margin-bottom:9px}
+.evitem{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
   background:var(--sunk);border:1px solid var(--line);border-radius:var(--r);
-  padding:9px 11px;cursor:pointer;font-family:var(--font);
+  padding:8px 10px;cursor:pointer;font-family:var(--font);
   transition:border-color .15s var(--ease)}
 .evitem:hover{border-color:var(--ink3)}
-.evkind{font:600 9.5px var(--font);letter-spacing:.5px;background:var(--s1-soft);
+.evkind{font:600 9px var(--font);letter-spacing:.5px;background:var(--s1-soft);
   color:var(--s1);border-radius:3px;padding:3px 6px;flex:none}
-.evtext{font-size:12.5px;color:var(--ink);flex:1;overflow:hidden;
+.evtext{font-size:12px;color:var(--ink);flex:1;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
-.evwho{font-size:11px;color:var(--ink3);flex:none}
+.evwho{font-size:10.5px;color:var(--ink3);flex:none}
 .evadd{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
-.evadd input{flex:1;min-width:150px;font-size:12px;padding:8px 10px}
+.evadd input{flex:1;min-width:180px;font-size:12px;padding:7px 10px;margin:0}
 
 .clockhead{display:flex;gap:32px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;
   border-bottom:1px solid var(--line2)}
