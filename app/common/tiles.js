@@ -41,6 +41,14 @@ export const tiles = [
     live: true
   },
   {
+    slug: 'offboarding',
+    name: 'Offboarding',
+    blurb: 'Who is leaving, what we need back from them, and what is still open.',
+    href: '/offboarding',
+    icon: 'offboarding',
+    live: true
+  },
+  {
     slug: 'documents',
     name: 'Company documents',
     blurb: 'Trade licences, establishment cards, letterheads and stamps, with expiry watched.',
