@@ -123,4 +123,5 @@ button.col:disabled{cursor:default;opacity:.6}
 
 .fnotice{font-size:12.5px;color:var(--s2);background:var(--s2-soft);border-radius:var(--r);
   padding:10px 13px;margin-bottom:14px;line-height:1.6}
+.fnotice.ok{color:var(--s4);background:var(--s4-soft)}
 `;
