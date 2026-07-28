@@ -73,4 +73,11 @@ export const documentsCss = `
 .binline{font-size:11.5px;color:var(--rose);background:var(--rose-soft);border-radius:var(--r);
   padding:8px 11px;margin-top:9px;line-height:1.55;display:inline-block}
 .doccard.deleted{border-left-color:var(--rose);background:#FFFDFD}
+
+.danger-zone{display:flex;gap:16px;align-items:center;border:1px solid var(--line);
+  border-left:2px solid var(--rose);border-radius:0 var(--r) var(--r) 0;padding:16px 18px;
+  flex-wrap:wrap}
+.danger-zone b{display:block;font-size:13.5px;font-weight:600;margin-bottom:5px}
+.danger-zone span{font-size:12.5px;color:var(--ink3);line-height:1.6;display:block;max-width:440px}
+.danger-zone .mini{margin-left:auto;flex:none}
 `;
