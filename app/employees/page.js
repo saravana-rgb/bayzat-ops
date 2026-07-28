@@ -3,6 +3,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AuthGate, Bar, supabase } from '../common/shared';
 import { ASSET_LABEL, ASSET_TYPES, FIELD, GROUPS, fullName, initials,
          missingOf, pretty, tenure } from './shared';
+import Reports from './reports';
+
+const PER_PAGE = 25;
 
 export default function EmployeesPage() {
   return <AuthGate><Shell /></AuthGate>;
@@ -10,6 +13,7 @@ export default function EmployeesPage() {
 
 function Shell() {
   const [email, setEmail] = useState('');
+  const [view, setView] = useState('directory');
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email || ''));
   }, []);
@@ -17,10 +21,18 @@ function Shell() {
     <div className="wrap">
       <Bar
         title="Employees"
-        sub="Everyone who works here, and what we still need to know about them"
+        sub={view === 'directory'
+          ? 'Everyone who works here, and what we still need to know about them'
+          : 'Headcount, joiners, devices and how complete the records are'}
         right={<a className="back" href="/">← All tiles</a>}
       />
-      <Directory email={email} />
+      <div className="viewswitch">
+        <button data-on={view === 'directory' ? '1' : '0'}
+          onClick={() => setView('directory')}>Directory</button>
+        <button data-on={view === 'reports' ? '1' : '0'}
+          onClick={() => setView('reports')}>Reports</button>
+      </div>
+      {view === 'directory' ? <Directory email={email} /> : <Reports />}
     </div>
   );
 }
@@ -32,6 +44,8 @@ function Directory({ email }) {
   const [scope, setScope] = useState('active');     // active | gaps | leavers | all
   const [facet, setFacet] = useState({ key: '', value: '' });
   const [sort, setSort] = useState('name');
+  const [gapFilter, setGapFilter] = useState('');   // '', '1', '2', '3', 'any', 'none'
+  const [page, setPage] = useState(0);
   const [openId, setOpenId] = useState(null);
   const [saved, setSaved] = useState('');
 
@@ -53,6 +67,8 @@ function Directory({ email }) {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, []);
+
+  useEffect(() => { setPage(0); }, [q, scope, facet, sort, gapFilter]);
 
   async function save(id, patch) {
     const { error } = await supabase.from('employees')
@@ -82,6 +98,12 @@ function Directory({ email }) {
     if (scope === 'leavers' && e.status !== 'leaver') return false;
     if (scope === 'gaps'    && (e.status !== 'active' || !e._missing.length)) return false;
     if (facet.key && (e[facet.key] || '') !== facet.value) return false;
+    const m = e._missing.length;
+    if (gapFilter === 'none' && m !== 0) return false;
+    if (gapFilter === 'any'  && m === 0) return false;
+    if (gapFilter === '1' && m !== 1) return false;
+    if (gapFilter === '2' && m !== 2) return false;
+    if (gapFilter === '3' && m < 3)   return false;
     if (!term) return true;
     return [e.first_name, e.last_name, e.preferred_name, e.work_email, e.employee_id,
             e.title, e.department, e.reports_to, e.asset_serial]
@@ -92,6 +114,23 @@ function Directory({ email }) {
     sort === 'gaps'   ? b._missing.length - a._missing.length
   : sort === 'newest' ? String(b.hiring_date || '').localeCompare(String(a.hiring_date || ''))
   : fullName(a).localeCompare(fullName(b)));
+
+  function exportCsv(rowsToWrite) {
+    const cols = ['employee_id','first_name','last_name','preferred_name','work_email',
+                  'personal_email','mobile_no','work_no','title','department','reports_to',
+                  'entity','location','office','hiring_date','nationality','gender',
+                  'asset_type','asset_serial','asset_note','status','onboarding_ref'];
+    const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+    const lines = [cols.concat(['missing_fields']).map(q).join(',')];
+    rowsToWrite.forEach(e => lines.push(
+      cols.map(c => q(e[c])).concat([q(e._missing.join(' '))]).join(',')));
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'employees-' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
 
   const active = withMissing.filter(e => e.status === 'active');
   const gaps = active.filter(e => e._missing.length);
@@ -144,12 +183,22 @@ function Directory({ email }) {
             {facets[k].map(v => <option key={v} value={v}>{v}</option>)}
           </select>
         ))}
-        {facet.key && (
-          <button className="mini" onClick={() => setFacet({ key: '', value: '' })}>
-            Clear {facet.value}
+        <select className="facetsel" value={gapFilter}
+          onChange={ev => setGapFilter(ev.target.value)}>
+          <option value="">Any completeness</option>
+          <option value="none">Nothing missing</option>
+          <option value="any">Anything missing</option>
+          <option value="1">Exactly 1 missing</option>
+          <option value="2">Exactly 2 missing</option>
+          <option value="3">3 or more missing</option>
+        </select>
+        {(facet.key || gapFilter) && (
+          <button className="mini" onClick={() => { setFacet({ key: '', value: '' }); setGapFilter(''); }}>
+            Clear filters
           </button>
         )}
         <span className="count">{list.length} shown</span>
+        <button className="mini" onClick={() => exportCsv(list)}>Export this view</button>
       </div>
 
       {list.length === 0
@@ -158,7 +207,7 @@ function Directory({ email }) {
             <span>Try a different search, or clear the filters.</span>
           </div>
         : <div className="people">
-            {list.map(e => (
+            {list.slice(page * PER_PAGE, page * PER_PAGE + PER_PAGE).map(e => (
               <button key={e.id} className={'person' + (e._missing.length ? ' gap' : '')}
                 onClick={() => setOpenId(e.id)}>
                 <span className={'ini ' + (e.status === 'leaver' ? 'left' : '')}>{initials(e)}</span>
@@ -185,12 +234,50 @@ function Directory({ email }) {
             ))}
           </div>}
 
+      {list.length > PER_PAGE && (
+        <Pager page={page} perPage={PER_PAGE} total={list.length} onPage={setPage} />
+      )}
+
       {open && <Drawer e={open} facets={facets} onClose={() => setOpenId(null)} onSave={save} />}
     </>
   );
 }
 
 /* ------------------------------------------------------------ pieces */
+/** Pages of 25. Shows a window of five page numbers so 240 people do not
+ *  produce a row of ten buttons. */
+function Pager({ page, perPage, total, onPage }) {
+  const pages = Math.ceil(total / perPage);
+  const from = page * perPage + 1;
+  const to = Math.min((page + 1) * perPage, total);
+  const start = Math.max(0, Math.min(page - 2, pages - 5));
+  const window = Array.from({ length: Math.min(5, pages) }, (_, i) => start + i);
+
+  return (
+    <div className="pager">
+      <span className="pinfo">{from}–{to} of {total}</span>
+      <div className="pbtns">
+        <button className="mini" disabled={page === 0} onClick={() => onPage(page - 1)}>
+          Previous
+        </button>
+        {start > 0 && <button className="mini" onClick={() => onPage(0)}>1</button>}
+        {start > 1 && <span className="pdots">…</span>}
+        {window.map(i => (
+          <button key={i} className="mini" data-on={i === page ? '1' : '0'}
+            onClick={() => onPage(i)}>{i + 1}</button>
+        ))}
+        {start + 5 < pages - 1 && <span className="pdots">…</span>}
+        {start + 5 < pages && (
+          <button className="mini" onClick={() => onPage(pages - 1)}>{pages}</button>
+        )}
+        <button className="mini" disabled={page >= pages - 1} onClick={() => onPage(page + 1)}>
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const Stat = ({ n, l, c }) => (
   <div className={'stat' + (c ? ' ' + c : '')}><b>{n}</b><span>{l}</span></div>
 );
