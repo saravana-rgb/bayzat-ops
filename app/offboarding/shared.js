@@ -84,55 +84,191 @@ export const GUIDES = {
   7: { hint: 'Final settlement with finance. Often the last thing to clear.' }
 };
 
-/** The handover receipt, generated from what we already know. Printed,
- *  signed, and scanned back in as evidence — which is what makes the
- *  collection provable rather than remembered. */
-export function receiptHtml(l) {
-  const row = (k, v) => `<tr><td>${k}</td><td><b>${v || '—'}</b></td></tr>`;
-  return `<!doctype html><html><head><meta charset="utf-8">
-<title>Device handover — ${fullName(l)}</title>
+/** The IT Asset Collection Form, built from what the system already knows.
+ *  Prints to one or two A4 pages. The verification checklist fills itself in
+ *  from the actual step statuses, so it cannot disagree with the record —
+ *  which is the whole point of generating it rather than typing it again. */
+export function receiptHtml(l, steps, actor) {
+  const esc = (v) => String(v ?? '').replace(/[&<>]/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const val = (v) => v ? esc(v) : '<i>&mdash;</i>';
+
+  /* the checklist maps onto the real steps; anything we have no step for is
+     left blank for whoever is holding the pen */
+  const byPos = Object.fromEntries((steps || []).map(s => [s.position, s]));
+  const mark = (s) => !s ? '☐ &nbsp;Pending'
+    : s.status === 'done' ? '☑ &nbsp;Completed'
+    : s.status === 'na' ? '&ndash; &nbsp;Not applicable'
+    : s.status === 'blocked' ? '☐ &nbsp;Blocked'
+    : '☐ &nbsp;Pending';
+
+  const checklist = [
+    ['Device received by IT', byPos[5]],
+    ['Device matched with asset inventory', null],
+    ['User account disabled', byPos[3]],
+    ['Google Workspace suspended or deprovisioned', byPos[1]],
+    ['MFA revoked', byPos[4]],
+    ['VPN access removed', byPos[4]],
+    ['Slack access removed', byPos[2]],
+    ['Other application access removed', byPos[3]],
+    ['Device wiped or reset', byPos[6]],
+    ['Returned to leasing vendor',
+      l.asset_type === 'leasing' ? byPos[5] : { status: 'na' }]
+  ];
+
+  const row = (k, v) => `<tr><th>${k}</th><td>${val(v)}</td></tr>`;
+  const line = (label, status) =>
+    `<tr><td>${label}</td><td class="st">${status}</td></tr>`;
+  const blank = (label, options) =>
+    `<tr><td>${label}</td><td class="st opt">${options}</td></tr>`;
+
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>IT Asset Collection Form — ${esc(fullName(l))}</title>
 <style>
-  body{font:400 13px/1.7 -apple-system,system-ui,sans-serif;color:#1F1B16;
-       max-width:640px;margin:40px auto;padding:0 24px}
-  h1{font-size:20px;font-weight:600;margin:0 0 4px}
-  .sub{color:#8F8779;font-size:12.5px;margin-bottom:28px}
-  table{border-collapse:collapse;width:100%;margin-bottom:28px}
-  td{padding:9px 0;border-bottom:1px solid #E6DFD3;vertical-align:top}
-  td:first-child{color:#8F8779;width:190px}
-  .box{border:1px solid #E6DFD3;border-radius:5px;padding:16px 18px;margin-bottom:20px}
-  .sign{display:flex;gap:40px;margin-top:44px}
-  .sign div{flex:1;border-top:1px solid #1F1B16;padding-top:8px;font-size:12px;color:#8F8779}
-  .note{font-size:12px;color:#8F8779;line-height:1.7}
-  @media print{body{margin:0}}
+  @page { size: A4; margin: 16mm 15mm; }
+  *{box-sizing:border-box}
+  body{font:400 10.5pt/1.55 -apple-system,"Segoe UI",system-ui,sans-serif;
+       color:#1a1a1a;margin:0;padding:0}
+  .sheet{max-width:186mm;margin:0 auto}
+
+  header{display:flex;align-items:flex-start;gap:14px;padding-bottom:14px;
+         border-bottom:2px solid #1a1a1a;margin-bottom:22px}
+  .mark{width:34px;height:34px;border-radius:6px;background:#B14A2E;color:#fff;
+        display:flex;align-items:center;justify-content:center;
+        font-weight:700;font-size:15pt;flex:none}
+  header h1{font-size:15pt;font-weight:600;margin:0;letter-spacing:-.2px}
+  header .sub{font-size:9pt;color:#6b6b6b;margin-top:3px}
+  header .ref{margin-left:auto;text-align:right;font-size:9pt;color:#6b6b6b}
+  header .ref b{display:block;font-size:11pt;color:#1a1a1a;letter-spacing:.5px}
+
+  h2{font-size:10pt;font-weight:600;text-transform:uppercase;letter-spacing:.8px;
+     color:#B14A2E;margin:22px 0 9px;padding-bottom:5px;border-bottom:1px solid #e0dcd4}
+  h2:first-of-type{margin-top:0}
+
+  table{width:100%;border-collapse:collapse;margin-bottom:4px}
+  th,td{text-align:left;vertical-align:top;padding:6px 8px;font-size:10pt;
+        border-bottom:1px solid #ebe7e0}
+  th{font-weight:400;color:#6b6b6b;width:36%}
+  td i{color:#b0aca4;font-style:normal}
+  td.st{width:44%;font-size:9.5pt}
+  td.st.opt{color:#6b6b6b}
+  table.grid th{background:#faf8f5;font-weight:600;color:#1a1a1a;width:auto;
+                border-bottom:1px solid #d8d3ca}
+  table.grid td{font-size:10pt}
+
+  .fill{display:inline-block;min-width:150px;border-bottom:1px solid #9a9a9a;
+        height:1.1em;vertical-align:baseline}
+  .remarks{border:1px solid #e0dcd4;border-radius:4px;padding:11px 13px;
+           min-height:52px;font-size:9.5pt;color:#3a3a3a;line-height:1.7}
+
+  .ack{margin-top:8px;font-size:9.5pt;color:#3a3a3a;line-height:1.7}
+  .signs{display:flex;gap:34px;margin-top:34px}
+  .signs div{flex:1}
+  .signs .rule{border-top:1px solid #1a1a1a;margin-bottom:6px;height:34px}
+  .signs small{font-size:8.5pt;color:#6b6b6b;display:block;line-height:1.6}
+  footer{margin-top:30px;padding-top:10px;border-top:1px solid #ebe7e0;
+         font-size:8pt;color:#9a9a9a;display:flex;justify-content:space-between}
+
+  section{break-inside:avoid;page-break-inside:avoid}
+  @media print{ .noprint{display:none} body{-webkit-print-color-adjust:exact;
+                print-color-adjust:exact} }
+  .noprint{position:fixed;top:12px;right:12px;display:flex;gap:8px}
+  .noprint button{font:500 12px system-ui;padding:8px 15px;border-radius:5px;
+                  border:1px solid #d8d3ca;background:#fff;cursor:pointer}
+  .noprint button.p{background:#B14A2E;border-color:#B14A2E;color:#fff}
 </style></head><body>
-<h1>Device handover</h1>
-<div class="sub">${l.ref} · generated ${pretty(today())}</div>
-<table>
-  ${row('Employee', fullName(l))}
-  ${row('Work email', l.work_email)}
-  ${row('Department', l.department)}
-  ${row('Last working day', pretty(l.last_working_day))}
-  ${row('Device', ASSET_LABEL[l.asset_type] || 'Not recorded')}
-  ${row('Serial number', l.asset_serial)}
-</table>
-<div class="box">
-  <b>Condition on return</b>
-  <p class="note">Circle one: &nbsp; Good &nbsp;·&nbsp; Minor damage &nbsp;·&nbsp;
-     Damaged &nbsp;·&nbsp; Not returned</p>
-  <p class="note">Notes: ________________________________________________</p>
+
+<div class="noprint">
+  <button onclick="window.close()">Close</button>
+  <button class="p" onclick="window.print()">Print or save as PDF</button>
 </div>
-<div class="box">
-  <b>Also returned</b>
-  <p class="note">Charger &nbsp;☐ &nbsp; Bag &nbsp;☐ &nbsp; Mouse &nbsp;☐ &nbsp;
-     Access card &nbsp;☐ &nbsp; Other: ____________________</p>
-</div>
-<p class="note">
-  I confirm the equipment listed above has been returned to Bayzat in the condition
-  recorded, and that I retain no company property or data.
-</p>
-<div class="sign">
-  <div>Employee signature and date</div>
-  <div>Received by, and date</div>
+
+<div class="sheet">
+  <header>
+    <div class="mark">B</div>
+    <div>
+      <h1>IT Asset Collection Form</h1>
+      <div class="sub">Bayzat &middot; Information Technology</div>
+    </div>
+    <div class="ref"><b>${esc(l.ref)}</b>Generated ${pretty(today())}</div>
+  </header>
+
+  <section>
+    <h2>Employee information</h2>
+    <table>
+      ${row('Employee name', fullName(l))}
+      ${row('Employee ID', l.employee_id)}
+      ${row('Department', l.department)}
+      ${row('Designation', l.title)}
+      ${row('Email address', l.work_email)}
+      ${row('Telephone', l.mobile_no)}
+      ${row('Last working day', pretty(l.last_working_day))}
+      ${row('Collection date', pretty(today()))}
+    </table>
+  </section>
+
+  <section>
+    <h2>Asset details</h2>
+    <table class="grid">
+      <tr><th>Asset type</th><th>Asset tag</th><th>Make &amp; model</th><th>Serial number</th></tr>
+      <tr>
+        <td>${l.asset_type ? esc(ASSET_LABEL[l.asset_type]) : '<i>&mdash;</i>'}</td>
+        <td><span class="fill"></span></td>
+        <td><span class="fill"></span></td>
+        <td><b>${l.asset_serial ? esc(l.asset_serial) : '<span class="fill"></span>'}</b></td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Asset condition</h2>
+    <table>
+      ${blank('Physical condition', 'Good &nbsp;/&nbsp; Fair &nbsp;/&nbsp; Damaged')}
+      ${blank('Device powers on', 'Yes &nbsp;/&nbsp; No')}
+      ${blank('Screen condition', 'Good &nbsp;/&nbsp; Marked &nbsp;/&nbsp; Cracked')}
+      ${blank('Keyboard and trackpad working', 'Yes &nbsp;/&nbsp; No')}
+      ${blank('Charger returned', 'Yes &nbsp;/&nbsp; No &nbsp;/&nbsp; N/A')}
+      ${blank('Accessories returned', 'Bag &nbsp;/&nbsp; Mouse &nbsp;/&nbsp; Card &nbsp;/&nbsp; None')}
+    </table>
+    <p style="font-size:9pt;color:#6b6b6b;margin:9px 0 5px">Damage notes</p>
+    <div class="remarks"></div>
+  </section>
+
+  <section>
+    <h2>IT verification checklist</h2>
+    <table>
+      ${checklist.map(([label, st]) => line(label, mark(st))).join('')}
+    </table>
+  </section>
+
+  <section>
+    <h2>Remarks</h2>
+    <div class="remarks">${l.notes ? esc(l.notes) : ''}</div>
+  </section>
+
+  <section>
+    <h2>Acknowledgement</h2>
+    <p class="ack">
+      I confirm that the company assets listed above have been returned, and that I retain
+      no company property, data or access.
+    </p>
+    <div class="signs">
+      <div>
+        <div class="rule"></div>
+        <small><b>${esc(fullName(l))}</b><br>Employee signature and date</small>
+      </div>
+      <div>
+        <div class="rule"></div>
+        <small><b>${esc((actor || '').split('@')[0] || 'IT representative')}</b><br>
+          Received and verified by, and date</small>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>${esc(l.ref)} &middot; ${esc(fullName(l))}</span>
+    <span>Bayzat IT &middot; ${pretty(today())}</span>
+  </footer>
 </div>
 </body></html>`;
 }
