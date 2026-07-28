@@ -94,39 +94,12 @@ export const onboardingCss = `
 .caret[data-open="1"]{transform:rotate(180deg)}
 .fold-b{padding:8px 20px 20px;border-top:1px solid var(--line2)}
 
-.bar-row{display:flex;align-items:center;gap:14px;padding:8px 0}
-.bar-lbl{font-size:12.5px;color:var(--ink2);font-weight:400;width:170px;flex:none;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bar-track{flex:1;height:6px;background:var(--line2);border-radius:3px;overflow:hidden}
-.bar-fill{display:block;height:6px;border-radius:3px;transition:width .4s var(--ease)}
-.bar-fill.p1{background:var(--s1)} .bar-fill.p2{background:var(--s2)} .bar-fill.p3{background:var(--s3)}
-.bar-fill.p4{background:var(--s4)} .bar-fill.p5{background:var(--s5)} .bar-fill.p6{background:var(--s6)}
-.bar-n{font:500 12.5px var(--font);width:24px;text-align:right;color:var(--ink2)}
+ .bar-fill.p2{background:var(--s2)} .bar-fill.p3{background:var(--s3)}
+ .bar-fill.p5{background:var(--s5)} .bar-fill.p6{background:var(--s6)}
 /* --------------------------------------------------------- reports */
 
-.filters{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin-bottom:24px}
-.filters select{width:auto;min-width:150px}
-.filters .dl{margin-left:auto;display:flex;gap:9px;align-items:center}
-.months{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
-.monthchip{border:1px solid var(--line);background:var(--surface);color:var(--ink2);
-  border-radius:var(--r);padding:8px 14px;font:500 12.5px var(--font);cursor:pointer}
-.monthchip:hover{border-color:var(--ink);color:var(--ink)}
-.monthchip[data-on="1"]{background:var(--ink);border-color:var(--ink);color:#fff}
-
-.headline{border-left:2px solid var(--ink);padding:4px 0 4px 20px;margin-bottom:28px}
-.headline p{font-size:15px;color:var(--ink2);line-height:1.85;font-weight:400}
-.headline b{font-weight:600;color:var(--ink)}
-
-.mrow{display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--line2);
-  flex-wrap:wrap}
-.mrow:last-child{border-bottom:0}
-.mlbl{font-size:13.5px;font-weight:500;width:180px;flex:none;display:flex;align-items:center;gap:9px}
-.mtrack{flex:1;min-width:130px;height:8px;background:var(--line2);border-radius:4px;overflow:hidden}
-.mfill{display:block;height:8px;border-radius:4px;transition:width .4s var(--ease)}
-.mfill.p1{background:var(--s1)} .mfill.p2{background:var(--s2)} .mfill.p3{background:var(--s3)}
-.mfill.p4{background:var(--s4)} .mfill.p5{background:var(--s5)} .mfill.p6{background:var(--s6)}
-.mval{font:600 13px var(--font);width:72px;text-align:right;color:var(--ink)}
-.msub{font-size:12px;color:var(--ink3);font-weight:400;width:132px;text-align:right}
+ .mfill.p2{background:var(--s2)} .mfill.p3{background:var(--s3)}
+ .mfill.p5{background:var(--s5)} .mfill.p6{background:var(--s6)}
 
 .thead{display:flex;align-items:center;gap:14px;padding:0 0 11px;border-bottom:1px solid var(--line);
   font:500 11px var(--font);color:var(--ink3);text-transform:none;letter-spacing:0}
@@ -134,21 +107,8 @@ export const onboardingCss = `
 .thead .tcell{font:500 11px var(--font);color:var(--ink3)}
 .tcell.ok{color:var(--emerald)} .tcell.warn{color:var(--amber)} .tcell.bad{color:var(--rose)}
 .tcell.dim{color:var(--ink3);font-weight:400}
-.foot-note{font-size:12.5px;color:var(--ink3);font-weight:400;line-height:1.7;margin-top:18px;
-  padding-top:16px;border-top:1px solid var(--line2)}
 
 /* monthly columns */
-.cols{display:flex;gap:10px;align-items:flex-end;padding:10px 0 0;min-height:200px}
-.col{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;
-  border-radius:var(--r);padding:8px 3px;transition:background .15s var(--ease)}
-.col:hover{background:var(--sunk)}
-.col.on{background:var(--sunk);box-shadow:inset 0 0 0 1px var(--line)}
-.colv{font:500 11px var(--font);color:var(--ink2);height:15px;white-space:nowrap}
-.coltrack{width:100%;max-width:44px;height:126px;background:var(--line2);border-radius:3px;
-  display:flex;align-items:flex-end;overflow:hidden}
-.colbar{width:100%;border-radius:3px;transition:height .45s var(--ease)}
-.coll{font:500 12px var(--font);color:var(--ink2)}
-.colc{font:400 11px var(--font);color:var(--ink3)}
 
 /* where the time goes */
 .legend{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:20px;font:400 12.5px var(--font);
