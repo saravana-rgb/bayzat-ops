@@ -6,6 +6,35 @@
 // their sources sit under their own heading.
 export const sources = [
   {
+    group: 'Employees',
+    items: [
+      {
+        name: 'Master Employee Details',
+        kind: 'Google Sheet',
+        tone: 'green',
+        desc: 'The original list, imported once as the starting point. The app is the record now.',
+        detail: '235 people seeded via seed-employees.sql',
+        url: 'https://docs.google.com/spreadsheets/d/1j05L-fbJY7fX8oCxJfu2rDoLBDp2NuVUNrUWplU8Zww/edit'
+      },
+      {
+        name: 'Employee Master (live)',
+        kind: 'Google Sheet',
+        tone: 'green',
+        desc: 'A read-only mirror, rewritten hourly from the database so anyone can pivot it in Sheets.',
+        detail: 'Tab inside the onboarding spreadsheet · edits here are overwritten',
+        url: 'https://docs.google.com/spreadsheets/d/1j05L-fbJY7fX8oCxJfu2rDoLBDp2NuVUNrUWplU8Zww/edit'
+      },
+      {
+        name: 'employees table',
+        kind: 'Database',
+        tone: 'accent',
+        desc: 'The record of who works here. Onboarding writes to it; offboarding will close rows in it.',
+        detail: 'Supabase → Table Editor → employees · view: v_employees',
+        url: 'https://supabase.com/dashboard'
+      }
+    ]
+  },
+  {
     group: 'Onboarding',
     items: [
       {
