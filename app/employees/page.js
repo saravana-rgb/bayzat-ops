@@ -301,6 +301,10 @@ function ConfirmRemove({ person, onCancel, onConfirm }) {
           <li><b>If they have left the company, do not use this.</b> Mark them as a leaver
             instead — offboarding, payroll and asset return all need the record.</li>
           <li><b>Nothing is destroyed.</b> The record moves to Removed and can be put back.</li>
+          <li><b>An onboarding ticket still running for them is cancelled</b> — there is no point
+            chasing six steps for a record that should not exist. A ticket already finished is
+            left alone, and putting the person back reopens a cancelled one.</li>
+          <li><b>They leave the master sheet</b> at the next refresh.</li>
           <li><b>Your name is recorded</b> against the removal, along with the reason.</li>
         </ul>
 
