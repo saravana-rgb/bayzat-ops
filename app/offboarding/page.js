@@ -2,8 +2,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AuthGate, Bar, supabase } from '../common/shared';
 import { ASSET_LABEL, BLOCKERS, EVIDENCE_REQUIRED, GUIDES, ORDER, STATUS,
-         dayChip, daysSince, fullName, initials, pretty, receiptHtml, today } from './shared';
+         dayChip, daysSince, fullName, initials, pretty, today } from './shared';
 import Reports from './reports';
+import Handover from './handover';
 
 export default function OffboardingPage() {
   return <AuthGate><Shell /></AuthGate>;
@@ -46,6 +47,7 @@ function Board({ email }) {
   const [starting, setStarting] = useState(null);   // the employee being offboarded
   const [blocking, setBlocking] = useState(null);   // the step being blocked
   const [evidence, setEvidence] = useState([]);
+  const [handover, setHandover] = useState(null);
 
   const load = useCallback(async () => {
     const [l, s, e, ev, evd] = await Promise.all([
@@ -406,7 +408,7 @@ function StartDialog({ employee, onCancel, onConfirm }) {
 }
 
 /** One step: what it is, how to do it, what proves it was done. */
-function Step({ s, leaver, evidence, actor, onSet, onNote, onEvidence, onOpenEvidence }) {
+function Step({ s, leaver, evidence, actor, onSet, onNote, onEvidence, onOpenEvidence, onForm }) {
   const [text, setText] = useState('');
   const [adding, setAdding] = useState(false);
   const fileRef = useRef(null);
@@ -437,12 +439,9 @@ function Step({ s, leaver, evidence, actor, onSet, onNote, onEvidence, onOpenEvi
           </a>
         )}
         {s.position === 5 && (
-          <button className="mini" onClick={() => {
-            const w = window.open('', '_blank');
-            w.document.write(receiptHtml(leaver, leaver.steps, actor));
-            w.document.close();
-            w.print();
-          }}>Print the handover form</button>
+          <button className="mini" onClick={() => onForm(leaver)}>
+            Open the collection form
+          </button>
         )}
       </div>
 
@@ -558,7 +557,7 @@ function BlockDialog({ step, onCancel, onConfirm }) {
 }
 
 function Detail({ l, events, evidence, actor, onClose, onSet, onNote, onCancel,
-                 onEvidence, onOpenEvidence }) {
+                 onEvidence, onOpenEvidence, onForm }) {
   const [cancelling, setCancelling] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const chip = dayChip(l.last_working_day, l.status);
@@ -596,7 +595,7 @@ function Detail({ l, events, evidence, actor, onClose, onSet, onNote, onCancel,
         </div>
 
         {l.steps.map(s => (
-          <Step key={s.id} s={s} leaver={l} actor={actor}
+          <Step key={s.id} s={s} leaver={l} actor={actor} onForm={onForm}
                 evidence={evidence.filter(x => x.step_id === s.id)}
                 onSet={onSet} onNote={onNote}
                 onEvidence={onEvidence} onOpenEvidence={onOpenEvidence} />
