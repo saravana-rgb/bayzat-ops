@@ -164,7 +164,7 @@ function Repo({ email }) {
                 <div className="grid">
                   {group.map(d => (
                     <DocCard key={d.id} d={d} onOpen={() => setOpenId(d.id)}
-                      onDownload={() => download(d)} onDelete={() => setDeleting(d)}
+                      onDownload={() => download(d)}
                       onRestore={() => restore(d)} onReplace={() => setReplacing(d)} />
                   ))}
                 </div>
@@ -185,7 +185,8 @@ function Repo({ email }) {
 
       {detail && <Detail d={detail} events={events.filter(e => e.document_id === detail.id)}
                          onClose={() => setOpenId(null)} onShare={share}
-                         onDownload={() => download(detail)} onSave={saveFields} />}
+                         onDownload={() => download(detail)} onSave={saveFields}
+                         onDelete={() => { setOpenId(null); setDeleting(detail); }} />}
     </>
   );
 }
@@ -299,7 +300,7 @@ function Upload({ onUpload }) {
   );
 }
 
-function DocCard({ d, onOpen, onDownload, onDelete, onRestore, onReplace }) {
+function DocCard({ d, onOpen, onDownload, onRestore, onReplace }) {
   const left = d.status === 'deleted' && d.deleted_at
     ? 15 - Math.floor((Date.now() - new Date(d.deleted_at)) / 864e5) : null;
   const chip = d.status === 'deleted'
@@ -341,11 +342,10 @@ function DocCard({ d, onOpen, onDownload, onDelete, onRestore, onReplace }) {
         <button className="mini" onClick={onDownload}>Download</button>
         <button className="mini" onClick={onOpen}>Share</button>
         {d.status === 'active' && <button className="mini" onClick={onReplace}>Replace</button>}
-        {d.status === 'deleted'
-          ? <button className="mini go" onClick={onRestore}>Restore</button>
-          : <button className="mini danger" style={{ marginLeft: 'auto' }} onClick={onDelete}>
-              Delete
-            </button>}
+        {d.status === 'deleted' &&
+          <button className="mini go" style={{ marginLeft: 'auto' }} onClick={onRestore}>
+            Restore
+          </button>}
       </div>
     </div>
   );
@@ -429,7 +429,7 @@ function Replace({ doc, onCancel, onPick }) {
   );
 }
 
-function Detail({ d, events, onClose, onShare, onDownload, onSave }) {
+function Detail({ d, events, onClose, onShare, onDownload, onSave, onDelete }) {
   const [to, setTo] = useState('');
   const [msg, setMsg] = useState('');
   const chip = expiryChip(d.expiry_date);
@@ -472,6 +472,23 @@ function Detail({ d, events, onClose, onShare, onDownload, onSave }) {
         <p className="note-txt" style={{ marginTop: 9 }}>
           They get a link that works for seven days without signing in. You are copied on it.
         </p>
+
+        {d.status === 'active' && (
+          <>
+            <div className="sec">Removing this document</div>
+            <div className="danger-zone">
+              <div>
+                <b>Delete this document</b>
+                <span>
+                  Rarely needed. Kept for 15 days so it can be restored, then removed for good.
+                  saravana@bayzat.com is told who deleted it and why, and the record of that
+                  stays even after the file has gone.
+                </span>
+              </div>
+              <button className="mini danger" onClick={onDelete}>Delete…</button>
+            </div>
+          </>
+        )}
 
         <div className="sec">History</div>
         {events.length === 0
