@@ -1,7 +1,14 @@
 'use client';
 /* How the Onboarding tile talks about time and status. */
 
-export const today = () => new Date().toISOString().slice(0, 10);
+/** Today, in the browser's own timezone. Deliberately not toISOString(),
+ *  which returns UTC and reads as yesterday for the first hours of every
+ *  day in Dubai — enough to make "last day today" show as "leaves tomorrow". */
+export const today = () => {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+};
 
 const diff = (a, b) =>
   Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 864e5);
