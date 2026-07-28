@@ -15,6 +15,13 @@ const CONDITION = {
   accessories: ['Bag', 'Mouse', 'Access card', 'None']
 };
 
+const DEVICE_TYPES = [
+  ['bayzat',   'Bayzat owned'],
+  ['leasing',  'Leased'],
+  ['personal', 'Personal device'],
+  ['none',     'No device']
+];
+
 const METHODS = [
   ['in_person',    'Handed over in person'],
   ['courier',      'Sent by courier'],
@@ -30,6 +37,8 @@ export default function Handover({ leaver, actor, onClose, onSaved }) {
   const [shareTo, setShareTo] = useState(leaver.work_email || '');
   const [shareNote, setShareNote] = useState('');
   const [sharing, setSharing] = useState(false);
+  const [serialOnRecord, setSerialOnRecord] = useState(leaver.asset_serial || '');
+  const [deviceType, setDeviceType] = useState(leaver.asset_type || '');
 
   useEffect(() => {
     supabase.from('leaver_handover').select('*').eq('leaver_id', leaver.id).maybeSingle()
@@ -44,6 +53,19 @@ export default function Handover({ leaver, actor, onClose, onSaved }) {
 
   async function save(quiet) {
     setBusy(true);
+
+    // if the device was never recorded, this is the moment we learn it —
+    // write it back to the leaver and to their employee record
+    if ((serialOnRecord && serialOnRecord !== leaver.asset_serial) ||
+        (deviceType && deviceType !== leaver.asset_type)) {
+      await supabase.rpc('set_leaver_asset', {
+        p_leaver_id: leaver.id, p_serial: serialOnRecord.trim(),
+        p_type: deviceType, p_actor: actor });
+      if (deviceType && !['personal', 'none'].includes(deviceType)) {
+        await supabase.rpc('reopen_device_steps', { p_leaver_id: leaver.id });
+      }
+    }
+
     const { data, error } = await supabase.rpc('save_handover', {
       p_leaver_id: leaver.id, p_form: form, p_actor: actor });
     setBusy(false);
@@ -71,7 +93,10 @@ export default function Handover({ leaver, actor, onClose, onSaved }) {
 
   function print() {
     const w = window.open('', '_blank');
-    w.document.write(printable(leaver, form, leaver.steps, actor));
+    w.document.write(printable(
+      { ...leaver, asset_serial: serialOnRecord || leaver.asset_serial,
+        asset_type: deviceType || leaver.asset_type },
+      form, leaver.steps, actor));
     w.document.close();
   }
 
@@ -113,9 +138,29 @@ export default function Handover({ leaver, actor, onClose, onSaved }) {
 
         <div className="fsec s-amber">
           <h3>The device</h3>
+          {!leaver.asset_serial && (
+            <p className="fnotice">
+              No device was recorded against this person. Fill it in here and it is saved
+              against them as well, so the gap closes rather than travelling with them.
+            </p>
+          )}
+
+          <Field label="Device type">
+            <div className="pills">
+              {DEVICE_TYPES.map(([v, l]) => (
+                <button key={v} className="pill" data-on={deviceType === v ? '1' : '0'}
+                  onClick={() => setDeviceType(v)}>{l}</button>
+              ))}
+            </div>
+          </Field>
+
           <div className="fgrid">
-            <Field label="Serial on record">
-              <input value={leaver.asset_serial || 'none recorded'} disabled />
+            <Field label="Serial on record"
+              hint={leaver.asset_serial
+                ? 'What we had on file for them'
+                : 'Nothing on file — type it in and we will save it'}>
+              <input value={serialOnRecord} placeholder="Not recorded"
+                onChange={e => setSerialOnRecord(e.target.value)} />
             </Field>
             <Field label="Serial on the machine"
               hint="Read it off the device — this is what catches the wrong laptop coming back">
@@ -162,9 +207,10 @@ export default function Handover({ leaver, actor, onClose, onSaved }) {
           <div className="fsec s-rose">
             <h3>Send it to them</h3>
             <p className="fhint">
-              For when the device is coming back by post, or they have already left. They get the
-              form with what we know filled in, and are asked to reply confirming. Keep their
-              reply as evidence on the collection step.
+              For when the device is coming back by post, or they have already left. They get
+              the form as an email and a PDF, with what we know filled in, and are asked to
+              reply confirming. You are copied on it. Keep their reply as evidence on the
+              collection step and the record is complete without anyone signing paper.
             </p>
             <div className="fgrid">
               <Field label="Send to">
