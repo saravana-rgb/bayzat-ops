@@ -1,8 +1,8 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AuthGate, Bar, supabase } from '../common/shared';
-import { ASSET_LABEL, BLOCKERS, ORDER, STATUS, dayChip, daysSince,
-         fullName, initials, pretty, today } from './shared';
+import { ASSET_LABEL, BLOCKERS, EVIDENCE_REQUIRED, GUIDES, ORDER, STATUS,
+         dayChip, daysSince, fullName, initials, pretty, receiptHtml, today } from './shared';
 import Reports from './reports';
 
 export default function OffboardingPage() {
@@ -45,18 +45,20 @@ function Board({ email }) {
   const [openId, setOpenId] = useState(null);
   const [starting, setStarting] = useState(null);   // the employee being offboarded
   const [blocking, setBlocking] = useState(null);   // the step being blocked
+  const [evidence, setEvidence] = useState([]);
 
   const load = useCallback(async () => {
-    const [l, s, e, ev] = await Promise.all([
+    const [l, s, e, ev, evd] = await Promise.all([
       supabase.from('leavers').select('*').order('last_working_day', { ascending: true }),
       supabase.from('leaver_steps').select('*').order('position'),
       supabase.from('employees').select('*').eq('status', 'active').order('first_name'),
-      supabase.from('leaver_events').select('*').order('created_at', { ascending: false }).limit(80)
+      supabase.from('leaver_events').select('*').order('created_at', { ascending: false }).limit(80),
+      supabase.from('leaver_evidence').select('*').order('created_at', { ascending: false })
     ]);
     if (l.error) { setError(l.error.message); return; }
     setError('');
     setLeavers(l.data || []); setSteps(s.data || []);
-    setStaff(e.data || []); setEvents(ev.data || []);
+    setStaff(e.data || []); setEvents(ev.data || []); setEvidence(evd.data || []);
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -77,7 +79,12 @@ function Board({ email }) {
     setSteps(all => all.map(s => s.id === step.id ? { ...s, status } : s));
     const { error } = await supabase.from('leaver_steps')
       .update({ status, updated_by: email }).eq('id', step.id);
-    if (error) setError(error.message);
+    if (error) {
+      setError(error.message.indexOf('ATTACH_EVIDENCE') > -1
+        ? `${step.label} needs evidence attached before it can be marked done — open the ` +
+          `person and add the signed form, a photo, or a note of what was done.`
+        : error.message);
+    }
     load();
   }
 
@@ -88,6 +95,32 @@ function Board({ email }) {
     if (data && data.ok === false) { setError(data.reason); return; }
     setBlocking(null); note('Recorded as blocked');
     load();
+  }
+
+  /** A file, a link or a note against a step. Files go to a private bucket;
+   *  downloads are short-lived signed links, never public URLs. */
+  async function addEvidence(step, { file, url, note: text }) {
+    let path = '', name = '', mime = '', size = null;
+    if (file) {
+      const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '-');
+      path = `${step.leaver_id}/${step.position}-${Date.now()}-${safe}`;
+      const up = await supabase.storage.from('offboarding-evidence').upload(path, file);
+      if (up.error) { setError(up.error.message); return; }
+      name = file.name; mime = file.type || ''; size = file.size;
+    }
+    const { error } = await supabase.rpc('add_leaver_evidence', {
+      p_step_id: step.id, p_kind: file ? 'file' : url ? 'link' : 'note',
+      p_file_path: path, p_file_name: name, p_mime: mime, p_size: size,
+      p_url: url || '', p_note: text || '', p_actor: email });
+    if (error) setError(error.message); else note('Evidence added');
+    load();
+  }
+
+  async function openEvidence(item) {
+    if (item.url) { window.open(item.url, '_blank'); return; }
+    const { data, error } = await supabase.storage.from('offboarding-evidence')
+      .createSignedUrl(item.file_path, 60);
+    if (error) setError(error.message); else window.open(data.signedUrl, '_blank');
   }
 
   async function setNote(step, text) {
@@ -189,8 +222,9 @@ function Board({ email }) {
       {blocking && <BlockDialog step={blocking} onCancel={() => setBlocking(null)}
                                 onConfirm={block} />}
       {detail && <Detail l={detail} events={events.filter(e => e.leaver_id === detail.id)}
+                         evidence={evidence.filter(e => e.leaver_id === detail.id)}
                          onClose={() => setOpenId(null)} onSet={setStep} onNote={setNote}
-                         onCancel={cancel} />}
+                         onCancel={cancel} onEvidence={addEvidence} onOpenEvidence={openEvidence} />}
     </>
   );
 }
@@ -371,6 +405,110 @@ function StartDialog({ employee, onCancel, onConfirm }) {
   );
 }
 
+/** One step: what it is, how to do it, what proves it was done. */
+function Step({ s, leaver, evidence, onSet, onNote, onEvidence, onOpenEvidence }) {
+  const [url, setUrl] = useState('');
+  const [text, setText] = useState('');
+  const fileRef = useRef(null);
+  const guide = GUIDES[s.position] || {};
+  const needs = EVIDENCE_REQUIRED.includes(s.position);
+
+  return (
+    <div className={'step e' + s.position + (s.status === 'done' ? ' done' : '')
+      + (s.status === 'blocked' ? ' late' : '')}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <div className={'num p' + s.position}>{s.position}</div>
+        <div className="st">{s.label}</div>
+        {needs && (
+          <span className={'chip ' + (evidence.length ? 'green' : 'amber')}>
+            {evidence.length ? `${evidence.length} attached` : 'Evidence needed'}
+          </span>
+        )}
+        {s.done_at && <span className="chip green" style={{ marginLeft: 'auto' }}>
+          {pretty(String(s.done_at).slice(0, 10))}</span>}
+      </div>
+
+      {guide.hint && <p className="guide">{guide.hint}</p>}
+
+      <div className="guiderow">
+        {guide.link && (
+          <a className="mini" href={guide.link} target="_blank" rel="noopener noreferrer">
+            {guide.linkLabel || 'How to do this'}
+          </a>
+        )}
+        {s.position === 5 && (
+          <button className="mini" onClick={() => {
+            const w = window.open('', '_blank');
+            w.document.write(receiptHtml(leaver));
+            w.document.close();
+            w.print();
+          }}>Print the handover form</button>
+        )}
+      </div>
+
+      {s.status === 'blocked' && <div className="blockline">Blocked · {s.blocker}</div>}
+
+      <div className="ctl">
+        {ORDER.map(v => (
+          <button key={v} data-on={s.status === v ? '1' : '0'} onClick={() => onSet(s, v)}>
+            {STATUS[v]}
+          </button>
+        ))}
+      </div>
+
+      <input className="note" defaultValue={s.note || ''}
+        placeholder="Note — courier reference, who has it, what was agreed"
+        onBlur={e => { if (e.target.value !== (s.note || '')) onNote(s, e.target.value); }} />
+
+      <div className="evidence">
+        <div className="evhead">
+          Evidence
+          {needs && <span className="evneed">
+            {guide.evidence || 'Required before this step can close'}
+          </span>}
+        </div>
+
+        {evidence.length > 0 && (
+          <div className="evlist">
+            {evidence.map(e => (
+              <button key={e.id} className="evitem" onClick={() => onOpenEvidence(e)}>
+                <span className="evkind">{e.kind === 'file' ? 'FILE'
+                  : e.kind === 'link' ? 'LINK' : 'NOTE'}</span>
+                <span className="evtext">
+                  {e.file_name || e.url || e.note}
+                  {e.note && (e.file_name || e.url) ? ' — ' + e.note : ''}
+                </span>
+                <span className="evwho">{(e.actor || '').split('@')[0]}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <input ref={fileRef} type="file" style={{ display: 'none' }}
+          accept="image/*,.pdf,.eml,.msg"
+          onChange={e => {
+            const f = e.target.files?.[0];
+            if (f) onEvidence(s, { file: f, note: text });
+            e.target.value = ''; setText('');
+          }} />
+
+        <div className="evadd">
+          <button className="mini" onClick={() => fileRef.current?.click()}>
+            Attach a photo or file
+          </button>
+          <input value={url} placeholder="or paste a link"
+            onChange={e => setUrl(e.target.value)} />
+          <input value={text} placeholder="or write what was done"
+            onChange={e => setText(e.target.value)} />
+          <button className="mini go" disabled={!url.trim() && !text.trim()}
+            onClick={() => { onEvidence(s, { url: url.trim(), note: text.trim() });
+                             setUrl(''); setText(''); }}>Add</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BlockDialog({ step, onCancel, onConfirm }) {
   const [reason, setReason] = useState('');
   const [note, setNote] = useState('');
@@ -402,7 +540,8 @@ function BlockDialog({ step, onCancel, onConfirm }) {
   );
 }
 
-function Detail({ l, events, onClose, onSet, onNote, onCancel }) {
+function Detail({ l, events, evidence, onClose, onSet, onNote, onCancel,
+                 onEvidence, onOpenEvidence }) {
   const [cancelling, setCancelling] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const chip = dayChip(l.last_working_day, l.status);
@@ -440,31 +579,10 @@ function Detail({ l, events, onClose, onSet, onNote, onCancel }) {
         </div>
 
         {l.steps.map(s => (
-          <div key={s.id} className={'step e' + s.position
-            + (s.status === 'done' ? ' done' : '') + (s.status === 'blocked' ? ' late' : '')}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <div className={'num p' + s.position}>{s.position}</div>
-              <div className="st">{s.label}</div>
-              {s.done_at && <span className="chip green" style={{ marginLeft: 'auto' }}>
-                {pretty(String(s.done_at).slice(0, 10))}</span>}
-            </div>
-
-            {s.status === 'blocked' && (
-              <div className="blockline">Blocked · {s.blocker}</div>
-            )}
-
-            <div className="ctl">
-              {ORDER.map(v => (
-                <button key={v} data-on={s.status === v ? '1' : '0'} onClick={() => onSet(s, v)}>
-                  {STATUS[v]}
-                </button>
-              ))}
-            </div>
-
-            <input className="note" defaultValue={s.note || ''}
-              placeholder="Note — courier reference, who has it, what was agreed"
-              onBlur={e => { if (e.target.value !== (s.note || '')) onNote(s, e.target.value); }} />
-          </div>
+          <Step key={s.id} s={s} leaver={l}
+                evidence={evidence.filter(x => x.step_id === s.id)}
+                onSet={onSet} onNote={onNote}
+                onEvidence={onEvidence} onOpenEvidence={onOpenEvidence} />
         ))}
 
         {l.status === 'pending' && (
