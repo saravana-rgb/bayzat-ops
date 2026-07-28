@@ -25,6 +25,14 @@ const PATHS = {
 // Adding a tile later means one entry here and one folder under app/.
 export const tiles = [
   {
+    slug: 'employees',
+    name: 'Employees',
+    blurb: 'Everyone who works here, what we know about them, and what is missing.',
+    href: '/employees',
+    icon: 'employees',
+    live: true
+  },
+  {
     slug: 'onboarding',
     name: 'Onboarding',
     blurb: 'New joiners, the six IT steps they need, and the monthly report.',
