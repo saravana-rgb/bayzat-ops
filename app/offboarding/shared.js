@@ -23,7 +23,14 @@ export const BLOCKERS = [
   'Something else'
 ];
 
-export const today = () => new Date().toISOString().slice(0, 10);
+/** Today, in the browser's own timezone. Deliberately not toISOString(),
+ *  which returns UTC and reads as yesterday for the first hours of every
+ *  day in Dubai — enough to make "last day today" show as "leaves tomorrow". */
+export const today = () => {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+};
 
 export const pretty = (iso) =>
   iso ? new Date(String(iso).slice(0, 10) + 'T00:00:00')
