@@ -78,4 +78,46 @@ button.col:disabled{cursor:default;opacity:.6}
   letter-spacing:-1px}
 .clockbig b{color:var(--emerald)} .clockwarn b{color:var(--rose)}
 .clockbig span,.clockwarn span{font-size:12.5px;color:var(--ink3);display:block;margin-top:6px}
+
+/* the collection form — colour marks the sections, not decoration */
+.panel.form{max-width:760px}
+.formhead{display:flex;align-items:flex-start;gap:12px;padding-bottom:16px;
+  border-bottom:1px solid var(--line);margin-bottom:18px}
+.formhead h2{font-size:18px;font-weight:600;letter-spacing:-.3px}
+.formhead p{font-size:12.5px;color:var(--ink3);margin-top:5px}
+
+.fsec{border:1px solid var(--line);border-left:3px solid var(--line);
+  border-radius:0 var(--r-lg) var(--r-lg) 0;padding:16px 18px;margin-bottom:14px}
+.fsec h3{font:600 11px var(--font);letter-spacing:.7px;text-transform:uppercase;
+  margin-bottom:14px}
+.fsec.s-blue{border-left-color:var(--s1);background:#F7FAFA}
+.fsec.s-blue h3{color:var(--s1)}
+.fsec.s-amber{border-left-color:var(--s2);background:#FEFAF7}
+.fsec.s-amber h3{color:var(--s2)}
+.fsec.s-green{border-left-color:var(--s4);background:#F8FBF7}
+.fsec.s-green h3{color:var(--s4)}
+.fsec.s-violet{border-left-color:var(--s3);background:#FAF7FB}
+.fsec.s-violet h3{color:var(--s3)}
+.fsec.s-rose{border-left-color:var(--s5);background:#FDF8FA}
+.fsec.s-rose h3{color:var(--s5)}
+
+.ffield{margin-bottom:13px}
+.ffield:last-child{margin-bottom:0}
+.ffield label{display:block;font:500 11px var(--font);color:var(--ink3);
+  text-transform:none;letter-spacing:0;margin-bottom:6px}
+.ffield input,.ffield select,.ffield textarea{background:var(--surface)}
+.ffield input:disabled{background:var(--sunk);color:var(--ink3)}
+.fhint{display:block;font-size:11px;color:var(--ink3);margin-top:5px;line-height:1.5}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:13px}
+
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--ink2);
+  border-radius:20px;padding:6px 13px;font:500 12px var(--font);cursor:pointer;
+  transition:all .15s var(--ease)}
+.pill:hover{border-color:var(--ink3);color:var(--ink)}
+.pill[data-on="1"]{background:var(--ink);border-color:var(--ink);color:#fff}
+
+.formacts{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px;padding-top:16px;
+  border-top:1px solid var(--line2)}
+.formacts .btn{flex:1;min-width:120px}
 `;
