@@ -321,4 +321,68 @@ label{display:block;font-size:11px;font-weight:500;letter-spacing:0;color:var(--
 .btn.danger{background:var(--rose);border-color:var(--rose)}
 .btn.danger:hover{background:#7F2029;border-color:#7F2029}
 .btn.danger:disabled{background:var(--line);border-color:var(--line);color:var(--ink3)}
+
+/* ---- person cards and checklists, used by more than one tile ---- */
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  overflow:hidden;cursor:pointer;transition:border-color .18s var(--ease)}
+.pcard:hover{border-color:var(--ink3)}
+.pcard.late{border-color:#E7C3CD}
+.pc-top{display:flex;align-items:flex-start;gap:12px;padding:20px 22px 0;flex-wrap:wrap}
+.pc-name{font-size:16px;font-weight:600;letter-spacing:-.25px;display:flex;align-items:center;
+  gap:9px;flex-wrap:wrap}
+.pc-meta{font-size:12.5px;color:var(--ink3);font-weight:400;margin-top:6px}
+.pc-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.pc-count{font:500 12px var(--font);color:var(--ink3)}
+.pc-bar{padding:16px 22px 0}
+.pc-steps{padding:8px 22px 16px}
+.pstep{display:flex;align-items:center;gap:13px;padding:12px 0;border-bottom:1px solid var(--line2);
+  flex-wrap:wrap}
+.pstep:last-child{border-bottom:0}
+.pstep:hover{background:var(--sunk)}
+.pnum{width:22px;height:22px;border-radius:3px;display:grid;place-items:center;
+  font:600 11px var(--font);flex:none}
+.plabel{font-size:13.5px;font-weight:500;flex:1;min-width:130px}
+.pacts{display:flex;gap:7px;margin-left:auto}
+.pfoot{border-top:1px solid var(--line2);padding:14px 22px;display:flex;gap:10px;
+  align-items:center;background:var(--sunk);flex-wrap:wrap}
+.allgood{font-size:12.5px;color:var(--emerald);font-weight:500;padding:6px 0}
+.runway{display:flex;gap:4px}
+.seg{height:4px;flex:1;border-radius:2px;background:var(--line2);transition:background .3s var(--ease)}
+.seg.done.p1{background:var(--s1)}.seg.done.p3{background:var(--s3)}.seg.done.p5{background:var(--s5)}.seg.progress{background:var(--amber);opacity:.5}
+.seg.na{background:var(--line)}
+.seg.late{background:#E7C3CD}
+.step{border:1px solid var(--line);border-left:2px solid var(--line);border-radius:0 var(--r) var(--r) 0;
+  padding:16px 18px;margin-top:12px}
+.step.e1{border-left-color:var(--s1)}.step.e3{border-left-color:var(--s3)}.step.e5{border-left-color:var(--s5)}.step.done{background:var(--sunk)}
+.step.late{border-color:#E7C3CD}
+.step .st{font-size:14px;font-weight:600}
+.num{width:22px;height:22px;border-radius:3px;display:grid;place-items:center;
+  font:600 11px var(--font);flex:none}
+.ctl{display:flex;gap:6px;margin-top:13px;flex-wrap:wrap}
+.ctl button{border:1px solid var(--line);background:var(--surface);color:var(--ink2);
+  border-radius:var(--r);padding:6px 12px;font:500 12px var(--font);cursor:pointer;
+  transition:all .15s var(--ease)}
+.ctl button:hover{border-color:var(--ink);color:var(--ink)}
+.ctl button[data-on="1"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.p1{background:var(--s1-soft);color:var(--s1)}.swork.p1{background:var(--s1)} .seg.done.p2{background:var(--s2)}
+ .p2{background:var(--s2-soft);color:var(--s2)}
+ .bar-fill.p2{background:var(--s2)} .mfill.p2{background:var(--s2)} .swork.p2{background:var(--s2)}.p3{background:var(--s3-soft);color:var(--s3)} .bar-fill.p3{background:var(--s3)}
+ .mfill.p3{background:var(--s3)}
+ .swork.p3{background:var(--s3)}
+ .seg.done.p4{background:var(--s4)}
+ .p4{background:var(--s4-soft);color:var(--s4)}
+.swork.p4{background:var(--s4)}.p5{background:var(--s5-soft);color:var(--s5)} .bar-fill.p5{background:var(--s5)} .mfill.p5{background:var(--s5)} .swork.p5{background:var(--s5)} .seg.done.p6{background:var(--s6)}
+ .p6{background:var(--s6-soft);color:var(--s6)}
+ .bar-fill.p6{background:var(--s6)}
+ .mfill.p6{background:var(--s6)}
+ .swork.p6{background:var(--s6)}
+ .step.e2{border-left-color:var(--s2)}
+ .step.e4{border-left-color:var(--s4)}
+ .step.e6{border-left-color:var(--s6)}
+.tcell{width:82px;flex:none;text-align:right;font:600 13px var(--font);color:var(--ink)}
+.thead .tcell{font:500 11px var(--font);color:var(--ink3)}
+.tcell.ok{color:var(--emerald)} .tcell.warn{color:var(--amber)}
+.tcell.bad{color:var(--rose)} .tcell.dim{color:var(--ink3);font-weight:400}
+.thead{display:flex;align-items:center;gap:14px;padding:0 0 11px;border-bottom:1px solid var(--line);
+  font:500 11px var(--font);color:var(--ink3);text-transform:none;letter-spacing:0}
 `;
