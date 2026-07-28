@@ -53,4 +53,15 @@ export const employeesCss = `
   .person .asset{width:auto}
   .person .gapcount{width:auto}
 }
+
+/* pagination */
+.pager{display:flex;align-items:center;gap:14px;margin-top:20px;flex-wrap:wrap}
+.pinfo{font:400 12.5px var(--font);color:var(--ink3)}
+.pbtns{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.pbtns .mini[data-on="1"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.pdots{color:var(--ink3);padding:0 2px;align-self:center}
+
+/* reports */
+.splitcols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:28px}
+.bt{font:600 12.5px var(--font);color:var(--ink);margin:0 0 12px}
 `;
