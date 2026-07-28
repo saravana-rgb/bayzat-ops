@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../common/shared';
-import { ASSET_LABEL, ASSET_TYPES, REQUIRED, FIELD, missingOf, pretty } from './shared';
+import { FIELD, REQUIRED, fullName, initials, missingOf, pretty } from './shared';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -9,6 +9,7 @@ export default function Reports() {
   const [rows, setRows] = useState(null);
   const [error, setError] = useState('');
   const [year, setYear] = useState('');
+  const [drill, setDrill] = useState(null);   // { title, people }
 
   const load = useCallback(async () => {
     const { data, error } = await supabase.from('employees').select('*');
@@ -16,6 +17,12 @@ export default function Reports() {
     setRows((data || []).map(e => ({ ...e, _missing: missingOf(e) })));
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const onKey = e => { if (e.key === 'Escape') setDrill(null); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
 
   if (error) return <div className="err">{error}</div>;
   if (!rows) return <p className="note-txt">Loading…</p>;
@@ -25,183 +32,212 @@ export default function Reports() {
     .sort().reverse();
   const yr = year || years[0] || String(new Date().getFullYear());
 
-  const by = (k) => {
-    const m = {};
-    active.forEach(e => { const v = (e[k] || '').trim() || 'Not set'; m[v] = (m[v] || 0) + 1; });
-    return Object.entries(m).sort((a, b) => b[1] - a[1]);
-  };
+  const complete = active.filter(e => !e._missing.length);
+  const pct = Math.round((complete.length / (active.length || 1)) * 100);
 
-  const dept = by('department');
-  const entity = by('entity');
-  const location = by('location');
-
-  const joiners = MONTHS.map((name, i) => ({
-    name,
-    n: rows.filter(e => (e.hiring_date || '').startsWith(`${yr}-${String(i + 1).padStart(2, '0')}`)).length
-  }));
-  const joinMax = Math.max(...joiners.map(j => j.n), 1);
-
-  // how complete each field is across the team
+  /* every required field, worst first — the work queue */
   const fields = REQUIRED.map(k => {
-    const filled = active.filter(e => String(e[k] ?? '').trim()).length;
-    return { k, label: FIELD[k]?.l || k, filled, pct: Math.round((filled / (active.length || 1)) * 100) };
-  }).sort((a, b) => a.pct - b.pct);
+    const absent = active.filter(e => !String(e[k] ?? '').trim());
+    return { k, label: FIELD[k]?.l || k, absent, pct: Math.round(
+      ((active.length - absent.length) / (active.length || 1)) * 100) };
+  }).sort((a, b) => b.absent.length - a.absent.length);
 
-  const devices = ASSET_TYPES.map(([v, l]) => ({
-    v, l, n: active.filter(e => e.asset_type === v).length
-  })).concat([{ v: '', l: 'Not recorded', n: active.filter(e => !e.asset_type).length }])
-    .filter(d => d.n > 0);
-  const devMax = Math.max(...devices.map(d => d.n), 1);
+  const joiners = MONTHS.map((name, i) => {
+    const key = `${yr}-${String(i + 1).padStart(2, '0')}`;
+    const people = rows.filter(e => (e.hiring_date || '').startsWith(key));
+    return { name, key, people };
+  });
+  const joinMax = Math.max(...joiners.map(j => j.people.length), 1);
+  const joinTotal = joiners.reduce((a, j) => a + j.people.length, 0);
 
-  const tenures = [
-    ['Under 6 months', 0, 0.5], ['6 to 12 months', 0.5, 1],
-    ['1 to 2 years', 1, 2], ['2 to 5 years', 2, 5], ['Over 5 years', 5, 99]
-  ].map(([label, lo, hi]) => ({
-    label,
-    n: active.filter(e => {
-      if (!e.hiring_date) return false;
-      const y = (Date.now() - new Date(e.hiring_date + 'T00:00:00')) / 31557600000;
-      return y >= lo && y < hi;
-    }).length
-  })).filter(t => t.n > 0);
-  const tenMax = Math.max(...tenures.map(t => t.n), 1);
-
-  const complete = active.filter(e => !e._missing.length).length;
-  const pctComplete = Math.round((complete / (active.length || 1)) * 100);
+  const groupBy = (k) => {
+    const m = {};
+    active.forEach(e => {
+      const v = (e[k] || '').trim() || 'Not set';
+      (m[v] = m[v] || []).push(e);
+    });
+    return Object.entries(m).sort((a, b) => b[1].length - a[1].length);
+  };
 
   return (
     <>
       <div className="headline">
         <p>
-          <b>{active.length}</b> people across <b>{entity.length}</b> entities and
-          <b> {dept.length}</b> departments. <b>{pctComplete}%</b> of records are complete;
-          the field most often missing is <b>{fields[0]?.label.toLowerCase()}</b>, absent for{' '}
-          <b>{active.length - (fields[0]?.filled || 0)}</b> people.
-          {' '}<b>{active.filter(e => !e.asset_type).length}</b> have no device recorded.
+          <b>{active.length}</b> people on the team. <b>{pct}%</b> of records are complete
+          {fields[0]?.absent.length > 0 && <>
+            {' '}— the biggest gap is <b>{fields[0].label.toLowerCase()}</b>, missing for{' '}
+            <b>{fields[0].absent.length}</b> of them</>}
+          . <b>{joinTotal}</b> people joined in {yr}.
+          {' '}Everything below is clickable — pick any bar or block to see who is in it.
         </p>
       </div>
 
       <div className="stats">
         <Stat n={active.length} l="On the team" />
-        <Stat n={complete} l="Complete records" c="good" />
-        <Stat n={active.length - complete} l="Need attention" c="hot" />
-        <Stat n={joiners.reduce((a, j) => a + j.n, 0)} l={`Joined in ${yr}`} c="calm" />
-        <Stat n={active.filter(e => e.asset_type === 'bayzat').length} l="Bayzat devices" />
+        <Stat n={complete.length} l="Complete records" c="good" />
+        <Stat n={active.length - complete.length} l="Need attention" c="hot" />
+        <Stat n={joinTotal} l={`Joined in ${yr}`} c="calm" />
       </div>
 
-      <div className="sec">How complete the records are</div>
+      {/* ---------------- data health ---------------- */}
+      <div className="sec">Record health</div>
       <div className="panelbox">
-        {fields.map(f => (
-          <div key={f.k} className="mrow">
-            <span className="mlbl">{f.label}</span>
-            <span className="mtrack">
-              <span className="mfill" style={{
-                width: f.pct + '%',
-                background: f.pct >= 95 ? 'var(--emerald)'
-                  : f.pct >= 80 ? 'var(--amber)' : 'var(--rose)'
-              }} />
-            </span>
-            <span className="mval">{f.pct}%</span>
-            <span className="msub">{active.length - f.filled} missing</span>
+        <div className="health">
+          <Ring pct={pct} done={complete.length} total={active.length} />
+          <div className="healthside">
+            <p className="hlead">
+              {complete.length} of {active.length} records have everything we need.
+            </p>
+            <p className="note-txt">
+              Each block below is one required field. The number is how many people are
+              missing it — click to see them.
+            </p>
+            <div className="fieldgrid">
+              {fields.map(f => (
+                <button key={f.k}
+                  className={'fcard ' + (f.absent.length === 0 ? 'ok'
+                    : f.absent.length > active.length * 0.25 ? 'bad' : 'warn')}
+                  disabled={!f.absent.length}
+                  onClick={() => setDrill({
+                    title: `Missing ${f.label.toLowerCase()}`, people: f.absent })}>
+                  <span className="fnum">{f.absent.length || '✓'}</span>
+                  <span className="flabel">{f.label}</span>
+                  <span className="fbar"><span style={{ width: f.pct + '%' }} /></span>
+                </button>
+              ))}
+            </div>
           </div>
-        ))}
-        <p className="foot-note">
-          Ordered worst first, so the top row is the field worth chasing. A record counts as
-          complete only when every one of these is filled in.
-        </p>
+        </div>
       </div>
 
-      <div className="sec">Joiners by month</div>
+      {/* ---------------- joiners ---------------- */}
+      <div className="sec">Joined by month</div>
       <div className="panelbox">
-        <div className="filters" style={{ marginBottom: 10 }}>
+        <div className="filters" style={{ marginBottom: 6 }}>
           <div>
             <label>Year</label>
             <select value={yr} onChange={e => setYear(e.target.value)}>
               {years.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
+          <span className="note-txt" style={{ marginLeft: 'auto' }}>
+            {joinTotal} joined · busiest month {
+              joiners.reduce((w, j) => j.people.length > w.people.length ? j : w, joiners[0]).name
+            }
+          </span>
         </div>
         <div className="cols">
           {joiners.map(j => (
-            <div key={j.name} className="col">
-              <span className="colv">{j.n || ''}</span>
+            <button key={j.name} className="col"
+              disabled={!j.people.length}
+              onClick={() => setDrill({
+                title: `Joined ${j.name} ${yr}`, people: j.people })}>
+              <span className="colv">{j.people.length || ''}</span>
               <span className="coltrack">
                 <span className="colbar" style={{
-                  height: j.n ? Math.max((j.n / joinMax) * 100, 4) + '%' : '2px',
-                  background: j.n ? 'var(--s1)' : 'var(--line)'
+                  height: j.people.length ? Math.max((j.people.length / joinMax) * 100, 5) + '%' : '2px',
+                  background: j.people.length ? 'var(--s1)' : 'var(--line)'
                 }} />
               </span>
               <span className="coll">{j.name}</span>
-            </div>
+            </button>
           ))}
         </div>
       </div>
 
+      {/* ---------------- where everyone sits ---------------- */}
       <div className="sec">Where everyone sits</div>
       <div className="panelbox">
         <div className="splitcols">
-          <Breakdown title="Department" data={dept} tone="s1" />
-          <Breakdown title="Entity" data={entity} tone="s3" />
-          <Breakdown title="Location" data={location} tone="s4" />
+          <Breakdown title="Department" data={groupBy('department')} tone="s1" onPick={setDrill} />
+          <Breakdown title="Entity" data={groupBy('entity')} tone="s3" onPick={setDrill} />
+          <Breakdown title="Location" data={groupBy('location')} tone="s4" onPick={setDrill} />
         </div>
       </div>
 
-      <div className="sec">Devices and tenure</div>
-      <div className="panelbox">
-        <div className="splitcols">
-          <div>
-            <h4 className="bt">Device type</h4>
-            {devices.map(d => (
-              <div key={d.v || 'none'} className="bar-row">
-                <span className="bar-lbl">{d.l}</span>
-                <span className="bar-track">
-                  <span className="bar-fill" style={{
-                    width: (d.n / devMax) * 100 + '%',
-                    background: d.v ? 'var(--s2)' : 'var(--rose)'
-                  }} />
-                </span>
-                <span className="bar-n">{d.n}</span>
-              </div>
-            ))}
-          </div>
-          <div>
-            <h4 className="bt">How long they have been here</h4>
-            {tenures.map(t => (
-              <div key={t.label} className="bar-row">
-                <span className="bar-lbl">{t.label}</span>
-                <span className="bar-track">
-                  <span className="bar-fill" style={{
-                    width: (t.n / tenMax) * 100 + '%', background: 'var(--s6)'
-                  }} />
-                </span>
-                <span className="bar-n">{t.n}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      {drill && <Drill title={drill.title} people={drill.people} onClose={() => setDrill(null)} />}
     </>
   );
 }
 
-function Breakdown({ title, data, tone }) {
-  const max = Math.max(...data.map(d => d[1]), 1);
+/* ------------------------------------------------------------ pieces */
+/** Completeness as a ring. One number, read in a glance. */
+function Ring({ pct, done, total }) {
+  const r = 62, c = 2 * Math.PI * r;
+  const tone = pct >= 90 ? 'var(--emerald)' : pct >= 60 ? 'var(--amber)' : 'var(--rose)';
+  return (
+    <svg className="ring" width="160" height="160" viewBox="0 0 160 160" role="img"
+      aria-label={`${pct} percent of records complete`}>
+      <circle cx="80" cy="80" r={r} fill="none" stroke="var(--line2)" strokeWidth="16" />
+      <circle cx="80" cy="80" r={r} fill="none" stroke={tone} strokeWidth="16"
+        strokeLinecap="round" strokeDasharray={`${(pct / 100) * c} ${c}`}
+        transform="rotate(-90 80 80)" />
+      <text x="80" y="76" textAnchor="middle" fontSize="30" fontWeight="600"
+        fill="var(--ink)">{pct}%</text>
+      <text x="80" y="97" textAnchor="middle" fontSize="11" fill="var(--ink3)">
+        {done} of {total}
+      </text>
+    </svg>
+  );
+}
+
+function Breakdown({ title, data, tone, onPick }) {
+  const max = Math.max(...data.map(d => d[1].length), 1);
+  const shown = data.slice(0, 10);
   return (
     <div>
       <h4 className="bt">{title}</h4>
-      {data.slice(0, 12).map(([name, n]) => (
-        <div key={name} className="bar-row">
+      {shown.map(([name, people]) => (
+        <button key={name} className="bar-row clickable"
+          onClick={() => onPick({ title: `${title}: ${name}`, people })}>
           <span className="bar-lbl">{name}</span>
           <span className="bar-track">
             <span className="bar-fill" style={{
-              width: (n / max) * 100 + '%',
+              width: (people.length / max) * 100 + '%',
               background: name === 'Not set' ? 'var(--rose)' : `var(--${tone})`
             }} />
           </span>
-          <span className="bar-n">{n}</span>
-        </div>
+          <span className="bar-n">{people.length}</span>
+        </button>
       ))}
-      {data.length > 12 && <p className="note-txt">and {data.length - 12} more</p>}
+      {data.length > 10 && (
+        <p className="note-txt" style={{ marginTop: 8 }}>and {data.length - 10} more</p>
+      )}
+    </div>
+  );
+}
+
+/** Whoever is behind the number just clicked. */
+function Drill({ title, people, onClose }) {
+  return (
+    <div className="veil" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="panel">
+        <div className="ph">
+          <div>
+            <h2 style={{ fontSize: 17, fontWeight: 600 }}>{title}</h2>
+            <div className="drawer-sub">{people.length} {people.length === 1 ? 'person' : 'people'}</div>
+          </div>
+          <button className="x" onClick={onClose}>✕</button>
+        </div>
+        <div className="drilllist">
+          {people.slice(0, 200).map(p => (
+            <div key={p.id} className="drillrow">
+              <span className="ini">{initials(p)}</span>
+              <span className="who">
+                <span className="nm">{fullName(p)}</span>
+                <span className="sub">
+                  {p.title || 'no title'}{p.department ? ' · ' + p.department : ''}
+                  {p.hiring_date ? ' · joined ' + pretty(p.hiring_date) : ''}
+                </span>
+              </span>
+              {p._missing?.length
+                ? <span className="chip red">{p._missing.length} missing</span>
+                : <span className="chip green">Complete</span>}
+            </div>
+          ))}
+        </div>
+        <button className="btn ghost" style={{ marginTop: 18 }} onClick={onClose}>Close</button>
+      </div>
     </div>
   );
 }
