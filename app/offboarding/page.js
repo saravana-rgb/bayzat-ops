@@ -226,7 +226,11 @@ function Board({ email }) {
       {detail && <Detail l={detail} events={events.filter(e => e.leaver_id === detail.id)}
                          evidence={evidence.filter(e => e.leaver_id === detail.id)} actor={email}
                          onClose={() => setOpenId(null)} onSet={setStep} onNote={setNote}
-                         onCancel={cancel} onEvidence={addEvidence} onOpenEvidence={openEvidence} />}
+                         onCancel={cancel} onEvidence={addEvidence} onOpenEvidence={openEvidence}
+                         onForm={setHandover} />}
+
+      {handover && <Handover leaver={handover} actor={email}
+                             onClose={() => setHandover(null)} onSaved={load} />}
     </>
   );
 }
