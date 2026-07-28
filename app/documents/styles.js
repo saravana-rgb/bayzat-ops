@@ -1,8 +1,6 @@
 /* Styles owned by the Documents tile. Nothing else uses these. */
 export const documentsCss = `
 /* ------------------------------------------------------- documents */
-.busy{background:var(--sunk);border:1px solid var(--line);border-radius:var(--r);
-  padding:11px 15px;font:400 13px var(--font);color:var(--ink2);margin-bottom:18px}
 .uprow{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end}
 
 .doccard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
