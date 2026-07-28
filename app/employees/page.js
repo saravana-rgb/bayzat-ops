@@ -154,8 +154,8 @@ function Directory({ email }) {
         <div className="tabset">
           {[['active', 'Everyone', active.length],
             ['gaps', 'Needs attention', gaps.length],
-            ['leavers', 'Leavers', withMissing.filter(e => e.status === 'leaver').length],
-            ['all', 'All records', withMissing.length]].map(([k, l, n]) => (
+            ['leavers', 'Leavers', withMissing.filter(e => e.status === 'leaver').length]]
+            .map(([k, l, n]) => (
             <button key={k} data-on={scope === k ? '1' : '0'}
               onClick={() => { setScope(k); setFacet({ key: '', value: '' }); }}>
               {l}{n ? ` · ${n}` : ''}
