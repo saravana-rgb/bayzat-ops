@@ -243,4 +243,9 @@ label{display:block;font-size:11px;font-weight:500;letter-spacing:0;color:var(--
   .src{align-items:flex-start;flex-wrap:wrap}
   .src-act{margin-left:0;width:100%}
 }
+
+/* used by more than one tile, so it lives here */
+.note{margin-top:11px;font-size:12.5px;padding:9px 11px}
+.busy{background:var(--sunk);border:1px solid var(--line);border-radius:var(--r);
+  padding:11px 15px;font:400 13px var(--font);color:var(--ink2);margin-bottom:18px}
 `;
