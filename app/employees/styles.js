@@ -39,9 +39,8 @@ export const employeesCss = `
 .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
 .field.wide{grid-column:1/-1}
 .field label{display:flex;align-items:center;gap:8px}
-.field .req{font-style:normal;font-size:9.5px;font-weight:500;color:var(--rose);
-  background:var(--rose-soft);border-radius:3px;padding:2px 6px;text-transform:none;
-  letter-spacing:0}
+.field .req{font-style:normal;font-size:14px;font-weight:600;color:var(--rose);
+  line-height:1;cursor:help}
 .field input.gap,.field select.gap{border-color:var(--rose);background:var(--rose-soft)}
 .field input.gap:focus,.field select.gap:focus{border-color:var(--rose);background:var(--surface)}
 .drawer-acts{display:flex;gap:10px;margin-top:26px;padding-top:20px;
