@@ -39,6 +39,22 @@ export default function Handover({ leaver, actor, onClose, onSaved }) {
   const [sharing, setSharing] = useState(false);
   const [serialOnRecord, setSerialOnRecord] = useState(leaver.asset_serial || '');
   const [deviceType, setDeviceType] = useState(leaver.asset_type || '');
+  const [fromEmployee, setFromEmployee] = useState(false);
+
+  // The leaver row is a snapshot taken when the offboarding started, so a
+  // device recorded on the employee afterwards is not in it. Fall back to
+  // the live employee record rather than showing an empty form.
+  useEffect(() => {
+    if (leaver.asset_serial || leaver.asset_type || !leaver.employee_id) return;
+    supabase.from('employees')
+      .select('asset_type, asset_serial').eq('id', leaver.employee_id).maybeSingle()
+      .then(({ data }) => {
+        if (!data) return;
+        if (data.asset_type && !deviceType) setDeviceType(data.asset_type);
+        if (data.asset_serial && !serialOnRecord) setSerialOnRecord(data.asset_serial);
+        if (data.asset_type || data.asset_serial) setFromEmployee(true);
+      });
+  }, [leaver.id]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const blank = {
@@ -67,8 +83,8 @@ export default function Handover({ leaver, actor, onClose, onSaved }) {
 
     // if the device was never recorded, this is the moment we learn it —
     // write it back to the leaver and to their employee record
-    if ((serialOnRecord && serialOnRecord !== leaver.asset_serial) ||
-        (deviceType && deviceType !== leaver.asset_type)) {
+    if ((serialOnRecord && serialOnRecord !== (leaver.asset_serial || '')) ||
+        (deviceType && deviceType !== (leaver.asset_type || ''))) {
       await supabase.rpc('set_leaver_asset', {
         p_leaver_id: leaver.id, p_serial: serialOnRecord.trim(),
         p_type: deviceType, p_actor: actor });
@@ -149,12 +165,18 @@ export default function Handover({ leaver, actor, onClose, onSaved }) {
 
         <div className="fsec s-amber">
           <h3>The device</h3>
-          {!leaver.asset_serial && (
-            <p className="fnotice">
-              No device was recorded against this person. Fill it in here and it is saved
-              against them as well, so the gap closes rather than travelling with them.
+          {fromEmployee ? (
+            <p className="fnotice ok">
+              Taken from their employee record — the offboarding was started before this was
+              filled in. Saving copies it onto the offboarding so the form and the record agree.
             </p>
-          )}
+          ) : !leaver.asset_serial && !deviceType ? (
+            <p className="fnotice">
+              No device is recorded against this person, here or on their employee record.
+              Fill it in and it is saved to both, so the gap closes rather than travelling
+              with them.
+            </p>
+          ) : null}
 
           <Field label="Device type">
             <div className="pills">
