@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import CommandPalette from './palette';
 
 /* ---------------------------------------------------------- client */
 
@@ -75,7 +76,12 @@ export function AuthGate({ children }) {
     );
   }
 
-  return children;
+  return (
+    <>
+      {children}
+      <CommandPalette />
+    </>
+  );
 }
 
 /** Sign-in form. Accounts are created by an admin in the Supabase
