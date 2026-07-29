@@ -385,4 +385,71 @@ label{display:block;font-size:11px;font-weight:500;letter-spacing:0;color:var(--
 .tcell.bad{color:var(--rose)} .tcell.dim{color:var(--ink3);font-weight:400}
 .thead{display:flex;align-items:center;gap:14px;padding:0 0 11px;border-bottom:1px solid var(--line);
   font:500 11px var(--font);color:var(--ink3);text-transform:none;letter-spacing:0}
+
+/* ---------------------------------------------------- the home page */
+.hello{display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:22px}
+.hello h2{font-size:23px;font-weight:600;letter-spacing:-.6px}
+.hello p{font-size:14px;color:var(--ink3);margin-top:8px}
+.kbd-hint{margin-left:auto;font-size:12px;color:var(--ink3);white-space:nowrap}
+kbd{font:500 11px var(--font);background:var(--surface);border:1px solid var(--line);
+  border-bottom-width:2px;border-radius:4px;padding:2px 6px;color:var(--ink2);margin:0 2px}
+
+.todaybox{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  overflow:hidden;margin-bottom:30px}
+.todayhead{display:flex;align-items:center;gap:10px;padding:14px 18px;
+  border-bottom:1px solid var(--line2);background:var(--sunk);
+  font:600 11px var(--font);letter-spacing:.8px;text-transform:uppercase;color:var(--ink2)}
+.todaycount{margin-left:auto;font:600 11px var(--font);background:var(--rose);color:#fff;
+  border-radius:20px;padding:2px 9px;letter-spacing:0}
+.job{display:flex;align-items:center;gap:14px;padding:14px 18px;
+  border-bottom:1px solid var(--line2);border-left:3px solid transparent;
+  transition:background .13s var(--ease)}
+.job:last-of-type{border-bottom:0}
+.job:hover{background:var(--sunk)}
+.job.rose{border-left-color:var(--rose)}
+.job.amber{border-left-color:var(--amber)}
+.job.blue{border-left-color:var(--s1)}
+.jdot{width:8px;height:8px;border-radius:50%;flex:none}
+.job.rose .jdot{background:var(--rose)}
+.job.amber .jdot{background:var(--amber)}
+.job.blue .jdot{background:var(--s1)}
+.jbody{flex:1;min-width:150px;display:grid;gap:3px}
+.jwhat{font-size:14.5px;font-weight:600;color:var(--ink)}
+.jwhy{font-size:12.5px;color:var(--ink3);line-height:1.5}
+.jgo{color:var(--line);font-size:16px;flex:none;transition:color .13s var(--ease)}
+.job:hover .jgo{color:var(--ink2)}
+.todaymore{display:block;padding:12px 18px;font-size:12.5px;color:var(--ink3);
+  background:var(--sunk);border-top:1px solid var(--line2)}
+.todaymore:hover{color:var(--ink)}
+
+/* ------------------------------------------------ the command palette */
+.pveil{position:fixed;inset:0;background:rgba(31,27,22,.4);backdrop-filter:blur(3px);
+  z-index:80;display:flex;align-items:flex-start;justify-content:center;
+  padding:12vh 20px 20px;animation:fade .15s var(--ease)}
+.palette{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  width:100%;max-width:600px;overflow:hidden;box-shadow:0 24px 70px rgba(31,27,22,.28);
+  animation:rise .18s var(--ease)}
+.pinput{width:100%;border:0;border-bottom:1px solid var(--line);border-radius:0;
+  padding:18px 20px;font:400 16px var(--font);outline:none;background:transparent}
+.pinput:focus{border-color:var(--line);box-shadow:none}
+.plist{max-height:52vh;overflow-y:auto;padding:7px}
+.pempty{padding:26px 14px;text-align:center;font-size:13px;color:var(--ink3)}
+.prow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;
+  background:transparent;border-radius:var(--r);padding:10px 12px;cursor:pointer;
+  font-family:var(--font)}
+.prow[data-on="1"]{background:var(--sunk)}
+.pkind{font:600 9px var(--font);letter-spacing:.5px;text-transform:uppercase;
+  border-radius:3px;padding:4px 7px;flex:none;min-width:62px;text-align:center}
+.pkind.act{background:var(--ink);color:#fff}
+.pkind.s1{background:var(--s1-soft);color:var(--s1)}
+.pkind.s3{background:var(--s3-soft);color:var(--s3)}
+.pkind.s4{background:var(--s4-soft);color:var(--s4)}
+.pkind.s5{background:var(--s5-soft);color:var(--s5)}
+.pbody{flex:1;min-width:0;display:grid;gap:2px}
+.ptitle{font-size:14px;font-weight:500;color:var(--ink);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.psub{font-size:12px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pfoot{display:flex;gap:16px;align-items:center;padding:11px 18px;
+  border-top:1px solid var(--line);background:var(--sunk);font-size:11.5px;color:var(--ink3)}
+.pfoot kbd{margin-right:3px}
 `;
