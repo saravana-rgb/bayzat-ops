@@ -107,6 +107,20 @@ export default function Handover({ leaver, actor, onClose, onSaved }) {
     return true;
   }
 
+  async function sign(who, dataUrl, name) {
+    const { data, error } = await supabase.rpc('sign_handover', {
+      p_leaver_id: leaver.id, p_who: who, p_signature: dataUrl,
+      p_name: name, p_actor: actor });
+    if (error) { setMsg(error.message); return; }
+    if (data && data.ok === false) { setMsg(data.reason); return; }
+    setMsg('Signed'); setTimeout(() => setMsg(''), 1800);
+    // reload so the printed copy carries it
+    const { data: fresh } = await supabase.from('leaver_handover')
+      .select('*').eq('leaver_id', leaver.id).maybeSingle();
+    if (fresh) setForm(fresh);
+    onSaved?.();
+  }
+
   async function share() {
     if (!(await save(true))) return;
     const { data, error } = await supabase.rpc('share_handover', {
@@ -236,6 +250,26 @@ export default function Handover({ leaver, actor, onClose, onSaved }) {
             onChange={e => set('remarks', e.target.value)} />
         </div>
 
+        <div className="fsec s-ink">
+          <h3>Signatures</h3>
+          <p className="fhint" style={{ marginBottom: 14 }}>
+            Sign on screen — a finger on a phone, a mouse on a laptop. What is drawn is
+            printed on the form, so nothing needs scanning back in. If they have already
+            left, send them the form instead and keep their reply as evidence.
+          </p>
+          <div className="fgrid">
+            <SignaturePad title="Employee" who="employee"
+              existing={form.employee_signature} existingName={form.employee_signed_name}
+              existingAt={form.employee_signed_at} defaultName={fullName(leaver)}
+              onSign={sign} />
+            <SignaturePad title="Received by (IT)" who="it"
+              existing={form.it_signature} existingName={form.it_signed_name}
+              existingAt={form.it_signed_at}
+              defaultName={form.collected_by || (actor || '').split('@')[0]}
+              onSign={sign} />
+          </div>
+        </div>
+
         {sharing ? (
           <div className="fsec s-rose">
             <h3>Send it to them</h3>
@@ -283,6 +317,90 @@ export default function Handover({ leaver, actor, onClose, onSaved }) {
   );
 }
 
+/** A signature pad. Draw with a finger, a stylus or a mouse; what is drawn
+ *  is stored as an image with the form and printed on it, so nothing has to
+ *  be scanned back in. */
+function SignaturePad({ title, who, existing, existingName, existingAt,
+                        defaultName, onSign, onClear }) {
+  const canvasRef = useRef(null);
+  const [drawing, setDrawing] = useState(false);
+  const [touched, setTouched] = useState(false);
+  const [name, setName] = useState(defaultName || '');
+
+  useEffect(() => {
+    const c = canvasRef.current;
+    if (!c) return;
+    // draw at device resolution so it is not blurry on a phone
+    const ratio = window.devicePixelRatio || 1;
+    const w = c.offsetWidth, h = c.offsetHeight;
+    c.width = w * ratio; c.height = h * ratio;
+    const ctx = c.getContext('2d');
+    ctx.scale(ratio, ratio);
+    ctx.lineWidth = 1.8; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#1F1B16';
+    if (existing) {
+      const img = new Image();
+      img.onload = () => ctx.drawImage(img, 0, 0, w, h);
+      img.src = existing;
+      setTouched(true);
+    }
+  }, [existing]);
+
+  function pos(e) {
+    const r = canvasRef.current.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+  function start(e) {
+    e.preventDefault();
+    const ctx = canvasRef.current.getContext('2d');
+    const { x, y } = pos(e);
+    ctx.beginPath(); ctx.moveTo(x, y);
+    setDrawing(true); setTouched(true);
+  }
+  function move(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    const ctx = canvasRef.current.getContext('2d');
+    const { x, y } = pos(e);
+    ctx.lineTo(x, y); ctx.stroke();
+  }
+  function end() { setDrawing(false); }
+
+  function clear() {
+    const c = canvasRef.current;
+    c.getContext('2d').clearRect(0, 0, c.width, c.height);
+    setTouched(false);
+    onClear?.();
+  }
+
+  const signed = !!existingAt;
+
+  return (
+    <div className="sigbox">
+      <div className="sighead">
+        <span className="sigtitle">{title}</span>
+        {signed && <span className="chip green">Signed {pretty(String(existingAt).slice(0, 10))}</span>}
+      </div>
+
+      <canvas ref={canvasRef} className="sigpad"
+        onPointerDown={start} onPointerMove={move} onPointerUp={end} onPointerLeave={end} />
+
+      <div className="sigrow">
+        <input value={name} placeholder="Full name"
+          onChange={e => setName(e.target.value)} />
+        <button className="mini" onClick={clear}>Clear</button>
+        <button className="mini go" disabled={!touched || !name.trim()}
+          onClick={() => onSign(who, canvasRef.current.toDataURL('image/png'), name.trim())}>
+          {signed ? 'Sign again' : 'Sign'}
+        </button>
+      </div>
+      {signed && existingName && (
+        <p className="fhint">Signed by {existingName}</p>
+      )}
+    </div>
+  );
+}
+
 function Field({ label, hint, children }) {
   return (
     <div className="ffield">
@@ -298,30 +416,9 @@ export function printable(l, f, steps, actor) {
   const esc = v => String(v ?? '').replace(/[&<>]/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
   const val = v => v ? esc(v) : '<i>&mdash;</i>';
-  const byPos = Object.fromEntries((steps || []).map(s => [s.position, s]));
-  const mark = s => !s ? '<span class="pend">Pending</span>'
-    : s.status === 'done' ? '<span class="done">Completed</span>'
-    : s.status === 'na' ? '<span class="na">Not applicable</span>'
-    : s.status === 'blocked' ? '<span class="blk">Blocked</span>'
-    : '<span class="pend">Pending</span>';
   const row = (k, v) => `<tr><th>${k}</th><td>${val(v)}</td></tr>`;
   const method = ({ in_person: 'Handed over in person', courier: 'Sent by courier',
                     post: 'Sent by post', not_returned: 'Not returned' })[f.method] || '';
-
-  const checks = [
-    ['Device received by IT', byPos[5]],
-    ['Serial matched against the record',
-      f.serial_seen && l.asset_serial
-        ? { status: f.serial_seen.toUpperCase().replace(/\s/g, '')
-            === l.asset_serial.toUpperCase().replace(/\s/g, '') ? 'done' : 'blocked' } : null],
-    ['Google Workspace suspended', byPos[1]],
-    ['Slack access removed', byPos[2]],
-    ['Bayzat Platform access removed', byPos[3]],
-    ['Drata and VPN removed', byPos[4]],
-    ['Device wiped or reset', byPos[6]],
-    ['Returned to leasing vendor', l.asset_type === 'leasing' ? byPos[5] : { status: 'na' }],
-    ['End of service settled', byPos[7]]
-  ];
 
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <title>Asset collection — ${esc(fullName(l))}</title>
@@ -351,13 +448,14 @@ export function printable(l, f, steps, actor) {
   .grid td b{font-size:10.5pt}
   .flag{background:#faeaea;color:#9b2c36;padding:8px 11px;border-radius:4px;
         font-size:9.5pt;margin:8px 0}
-  .done{color:#3f6b3a;font-weight:600} .pend{color:#8f8779}
-  .na{color:#b0aca4} .blk{color:#9b2c36;font-weight:600}
   .box{border:1px solid #e6dfd3;border-radius:4px;padding:10px 12px;min-height:40px;
        font-size:9.5pt;color:#3a3a3a;line-height:1.6;white-space:pre-wrap}
   .ack{font-size:9.5pt;color:#3a3a3a;line-height:1.7;margin-top:6px}
   .signs{display:flex;gap:32px;margin-top:32px}
-  .signs div{flex:1}.signs .rule{border-top:1px solid #1f1b16;margin-bottom:5px;height:32px}
+  .signs div{flex:1}.signs .rule{height:44px}
+  .signs .sig{display:block;height:46px;object-fit:contain;object-position:left bottom;
+              max-width:100%}
+  .signs .sigline{border-top:1px solid #1f1b16;margin-bottom:5px}
   .signs small{font-size:8.5pt;color:#8f8779;line-height:1.5;display:block}
   footer{margin-top:26px;padding-top:9px;border-top:1px solid #efeae1;font-size:8pt;
          color:#b0aca4;display:flex;justify-content:space-between}
@@ -415,11 +513,6 @@ export function printable(l, f, steps, actor) {
     ${f.damage_notes ? `<div class="box" style="margin-top:9px">${esc(f.damage_notes)}</div>` : ''}
   </section>
 
-  <section><h2 class="c4">IT verification</h2>
-    <table>${checks.map(([label, s]) =>
-      `<tr><td>${label}</td><td style="width:38%">${mark(s)}</td></tr>`).join('')}</table>
-  </section>
-
   ${f.remarks ? `<section><h2 class="c1">Remarks</h2>
     <div class="box">${esc(f.remarks)}</div></section>` : ''}
 
@@ -427,10 +520,27 @@ export function printable(l, f, steps, actor) {
     <p class="ack">I confirm that the company assets listed above have been returned, and that
       I retain no company property, data or access.</p>
     <div class="signs">
-      <div><div class="rule"></div><small><b>${esc(fullName(l))}</b><br>
-        Employee signature and date</small></div>
-      <div><div class="rule"></div><small><b>${esc(f.collected_by ||
-        (actor || '').split('@')[0])}</b><br>Received and verified by, and date</small></div>
+      <div>
+        ${f.employee_signature
+          ? `<img src="${f.employee_signature}" alt="" class="sig">`
+          : '<div class="rule"></div>'}
+        <div class="sigline"></div>
+        <small><b>${esc(f.employee_signed_name || fullName(l))}</b><br>
+          ${f.employee_signed_at
+            ? 'Signed ' + pretty(String(f.employee_signed_at).slice(0, 10))
+            : 'Employee signature and date'}</small>
+      </div>
+      <div>
+        ${f.it_signature
+          ? `<img src="${f.it_signature}" alt="" class="sig">`
+          : '<div class="rule"></div>'}
+        <div class="sigline"></div>
+        <small><b>${esc(f.it_signed_name || f.collected_by ||
+          (actor || '').split('@')[0])}</b><br>
+          ${f.it_signed_at
+            ? 'Received and verified ' + pretty(String(f.it_signed_at).slice(0, 10))
+            : 'Received and verified by, and date'}</small>
+      </div>
     </div>
   </section>
 
