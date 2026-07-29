@@ -84,10 +84,11 @@ function Shell() {
       why: -days(x.expiry_date) < 0 ? 'Expired' : `Expires in ${-days(x.expiry_date)} days`,
       sort: 80 - (-days(x.expiry_date))
     }));
-    d.joinerList.filter(j => j.days >= 3).forEach(j => jobs.push({
-      tone: 'blue', href: '/onboarding',
+    d.joinerList.forEach(j => jobs.push({
+      tone: j.days >= 7 ? 'rose' : 'blue', href: '/onboarding',
       what: j.name,
-      why: `Joined ${j.days} days ago, ${j.steps} step${j.steps > 1 ? 's' : ''} outstanding`,
+      why: (j.days === 0 ? 'Joining now' : `Joined ${j.days} day${j.days > 1 ? 's' : ''} ago`)
+        + ` — ${j.steps} step${j.steps > 1 ? 's' : ''} still to do`,
       sort: 40 + j.days
     }));
   }
@@ -112,7 +113,6 @@ function Shell() {
                 : `${jobs.length} thing${jobs.length > 1 ? 's need' : ' needs'} your attention.`}
           </p>
         </div>
-        <span className="kbd-hint">Press <kbd>/</kbd> to search anything</span>
       </div>
 
       {d && jobs.length > 0 && (
