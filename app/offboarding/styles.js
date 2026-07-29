@@ -124,4 +124,17 @@ button.col:disabled{cursor:default;opacity:.6}
 .fnotice{font-size:12.5px;color:var(--s2);background:var(--s2-soft);border-radius:var(--r);
   padding:10px 13px;margin-bottom:14px;line-height:1.6}
 .fnotice.ok{color:var(--s4);background:var(--s4-soft)}
+
+/* signing */
+.fsec.s-ink{border-left-color:var(--ink);background:var(--sunk)}
+.fsec.s-ink h3{color:var(--ink)}
+.sigbox{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);
+  padding:12px 13px}
+.sighead{display:flex;align-items:center;gap:9px;margin-bottom:9px;flex-wrap:wrap}
+.sigtitle{font:600 11.5px var(--font);color:var(--ink2)}
+.sigpad{width:100%;height:110px;border:1px dashed var(--line);border-radius:var(--r);
+  background:#fff;cursor:crosshair;touch-action:none;display:block}
+.sigpad:hover{border-color:var(--ink3)}
+.sigrow{display:flex;gap:7px;align-items:center;margin-top:9px;flex-wrap:wrap}
+.sigrow input{flex:1;min-width:120px;font-size:12px;padding:7px 10px;margin:0}
 `;
