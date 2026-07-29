@@ -46,6 +46,22 @@ export const sources = [
         url: 'https://docs.google.com/spreadsheets/d/1j05L-fbJY7fX8oCxJfu2rDoLBDp2NuVUNrUWplU8Zww/edit?gid=0#gid=0'
       },
       {
+        name: 'IT and HRIS session',
+        kind: 'Deck',
+        tone: 'accent',
+        desc: 'The session new joiners are walked through — IT access, the Bayzat platform, and how Spaces work. Editable, for when the process changes.',
+        detail: 'PowerPoint · 713 KB',
+        url: '/decks/IT-and-HRIS-Session.pptx'
+      },
+      {
+        name: 'IT and HRIS session — web version',
+        kind: 'Deck',
+        tone: 'accent',
+        desc: 'The same session as a web page. Opens in a browser with nothing to install, so it can be shared with a joiner directly.',
+        detail: 'Opens in this tab · no download',
+        url: '/decks/IT-and-HRIS-Session-editable.html'
+      },
+      {
         name: 'Apps Script',
         kind: 'Automation',
         tone: 'amber',
