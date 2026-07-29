@@ -103,18 +103,24 @@ function Shell() {
       />
 
       <div className="hello">
-        <h2>{greeting()}{name ? ', ' + name.charAt(0).toUpperCase() + name.slice(1) : ''}</h2>
-        <p>
-          {!d ? 'Checking what needs you…'
-            : jobs.length === 0
-              ? 'Nothing is waiting on you. Every joiner, leaver and licence is up to date.'
-              : `${jobs.length} thing${jobs.length > 1 ? 's need' : ' needs'} you today.`}
-          <span className="kbd-hint">Press <kbd>/</kbd> to search anything</span>
-        </p>
+        <div>
+          <h2>{greeting()}{name ? ', ' + name.charAt(0).toUpperCase() + name.slice(1) : ''}</h2>
+          <p>
+            {!d ? 'Checking what needs you…'
+              : jobs.length === 0
+                ? 'Nothing is waiting on you — every joiner, leaver and licence is up to date.'
+                : `${jobs.length} thing${jobs.length > 1 ? 's need' : ' needs'} your attention.`}
+          </p>
+        </div>
+        <span className="kbd-hint">Press <kbd>/</kbd> to search anything</span>
       </div>
 
       {d && jobs.length > 0 && (
-        <div className="today">
+        <div className="todaybox">
+          <div className="todayhead">
+            <span>Needs you today</span>
+            <span className="todaycount">{jobs.length}</span>
+          </div>
           {jobs.slice(0, 6).map((j, i) => (
             <a key={i} className={'job ' + j.tone} href={j.href}>
               <span className="jdot" />
@@ -126,26 +132,33 @@ function Shell() {
             </a>
           ))}
           {jobs.length > 6 && (
-            <p className="note-txt" style={{ padding: '4px 2px' }}>
-              and {jobs.length - 6} more across the tiles
-            </p>
+            <a className="todaymore" href="/onboarding">
+              and {jobs.length - 6} more across the tiles →
+            </a>
           )}
         </div>
       )}
 
       <div className="tiles">
         {visible.map(t => {
-          const counts = d && {
-            onboarding: d.joinerList.length && `${d.joinerList.length} pending`,
-            offboarding: d.openLeavers.length && `${d.openLeavers.length} in progress`,
-            employees: d.gaps.length && `${d.gaps.length} need attention`,
-            documents: d.soon.length && `${d.soon.length} expiring`
+          // a plain `length && text` returns 0 when the count is zero, and
+          // React renders that 0 on the page — hence the stray zeroes
+          const n = d ? {
+            onboarding: d.joinerList.length,
+            offboarding: d.openLeavers.length,
+            employees: d.gaps.length,
+            documents: d.soon.length
+          }[t.slug] : null;
+          const label = {
+            onboarding: 'pending', offboarding: 'in progress',
+            employees: 'need attention', documents: 'expiring'
           }[t.slug];
-          const urgent = d && {
+          const counts = n ? `${n} ${label}` : null;
+          const urgent = d ? ({
             offboarding: d.dueLeavers.length,
             documents: d.soon.filter(x => -days(x.expiry_date) <= 7).length,
             onboarding: d.joinerList.filter(j => j.days >= 7).length
-          }[t.slug];
+          }[t.slug] || 0) : 0;
 
           const inner = (
             <>
@@ -158,7 +171,7 @@ function Shell() {
                 {t.slug === 'sources' && <span className="chip green">Only you</span>}
                 {!t.live && <span className="chip grey">Coming later</span>}
                 {d && t.live && !counts && !urgent && t.slug !== 'sources' &&
-                  <span className="chip green">All clear</span>}
+                  n !== null && <span className="chip green">All clear</span>}
               </div>
             </>
           );
