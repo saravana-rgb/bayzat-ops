@@ -69,8 +69,8 @@ export const tiles = [
   },
   {
     slug: 'next',
-    name: 'Your next tile',
-    blurb: 'Offboarding, asset register, access reviews — whatever comes next.',
+    name: 'Asset register',
+    blurb: 'Every device, who has it, and what came back — built from what onboarding and offboarding already know.',
     href: '#',
     icon: 'plus',
     live: false
