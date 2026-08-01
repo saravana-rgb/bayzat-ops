@@ -3,6 +3,41 @@ import { useCallback, useEffect, useState } from 'react';
 import { AuthGate, Bar, Icon, supabase } from './common/shared';
 import { isAdmin, tiles } from './common/tiles';
 
+/** One kind of work. Empty lanes still show, so the shape of the day is the
+ *  same every morning and a glance tells you which side is busy. */
+function Lane({ kind, title, icon, blurb, items, href }) {
+  const urgent = items.filter(i => i.urgent).length;
+  return (
+    <div className={'lane ' + kind + (items.length ? '' : ' quiet')}>
+      <a className="lanehead" href={href}>
+        <span className="laneicon">{icon}</span>
+        <span className="lanetitle">
+          {title}
+          <span className="laneblurb">{blurb}</span>
+        </span>
+        <span className={'lanecount' + (urgent ? ' hot' : '')}>{items.length}</span>
+      </a>
+
+      {items.length === 0
+        ? <p className="lanenone">Nothing outstanding</p>
+        : <div className="lanelist">
+            {items.slice(0, 4).map((i, n) => (
+              <a key={n} className={'laneitem' + (i.urgent ? ' urgent' : '')} href={href}>
+                <span className="liname">{i.name}</span>
+                <span className="liwhen">{i.when}</span>
+                <span className="liwhy">{i.why}</span>
+              </a>
+            ))}
+            {items.length > 4 && (
+              <a className="lanemore" href={href}>
+                and {items.length - 4} more →
+              </a>
+            )}
+          </div>}
+    </div>
+  );
+}
+
 export default function Home() {
   return <AuthGate><Shell /></AuthGate>;
 }
@@ -67,32 +102,43 @@ function Shell() {
   const visible = tiles.filter(t => !t.adminOnly || isAdmin(email));
   const name = (email || '').split('@')[0].split('.')[0];
 
-  /* everything that wants attention today, in one list, worst first */
-  const jobs = [];
+  /* Leaving and joining are opposite jobs, so they are not mixed into one
+     list. Within each, the longest-waiting comes first. */
+  const leaving = [], joining = [], expiring = [];
   if (d) {
-    d.dueLeavers.forEach(l => jobs.push({
-      tone: 'rose', href: '/offboarding',
-      what: `${l.first_name} ${l.last_name} has left`,
-      why: days(l.last_working_day) === 0
-        ? 'Last day is today — collect the device and close their access'
-        : `${days(l.last_working_day)} days ago and the checklist is still open`,
-      sort: 100 + days(l.last_working_day)
+    d.dueLeavers.forEach(l => {
+      const n = days(l.last_working_day);
+      leaving.push({
+        name: `${l.first_name} ${l.last_name}`,
+        when: n === 0 ? 'Last day is today' : `Left ${n} day${n > 1 ? 's' : ''} ago`,
+        why: n === 0
+          ? 'Collect the device and close their access before the end of the day'
+          : 'The checklist is still open',
+        urgent: n > 0, sort: n
+      });
+    });
+    d.joinerList.forEach(j => joining.push({
+      name: j.name,
+      when: j.days === 0 ? 'Starts today'
+        : j.days < 0 ? `Starts in ${-j.days} days`
+        : `Started ${j.days} day${j.days > 1 ? 's' : ''} ago`,
+      why: `${j.steps} step${j.steps > 1 ? 's' : ''} still to do`,
+      urgent: j.days >= 7, sort: j.days
     }));
-    d.soon.forEach(x => jobs.push({
-      tone: 'amber', href: '/documents',
-      what: x.title,
-      why: -days(x.expiry_date) < 0 ? 'Expired' : `Expires in ${-days(x.expiry_date)} days`,
-      sort: 80 - (-days(x.expiry_date))
-    }));
-    d.joinerList.forEach(j => jobs.push({
-      tone: j.days >= 7 ? 'rose' : 'blue', href: '/onboarding',
-      what: j.name,
-      why: (j.days === 0 ? 'Joining now' : `Joined ${j.days} day${j.days > 1 ? 's' : ''} ago`)
-        + ` — ${j.steps} step${j.steps > 1 ? 's' : ''} still to do`,
-      sort: 40 + j.days
-    }));
+    d.soon.forEach(x => {
+      const n = -days(x.expiry_date);
+      expiring.push({
+        name: x.title,
+        when: n < 0 ? `Expired ${-n} days ago` : n === 0 ? 'Expires today' : `Expires in ${n} days`,
+        why: 'Needs renewing',
+        urgent: n <= 7, sort: -n
+      });
+    });
   }
-  jobs.sort((a, b) => b.sort - a.sort);
+  leaving.sort((a, b) => b.sort - a.sort);
+  joining.sort((a, b) => b.sort - a.sort);
+  expiring.sort((a, b) => b.sort - a.sort);
+  const total = leaving.length + joining.length + expiring.length;
 
   return (
     <div className="wrap">
@@ -108,34 +154,24 @@ function Shell() {
           <h2>{greeting()}{name ? ', ' + name.charAt(0).toUpperCase() + name.slice(1) : ''}</h2>
           <p>
             {!d ? 'Checking what needs you…'
-              : jobs.length === 0
+              : total === 0
                 ? 'Nothing is waiting on you — every joiner, leaver and licence is up to date.'
-                : `${jobs.length} thing${jobs.length > 1 ? 's need' : ' needs'} your attention.`}
+                : `${total} thing${total > 1 ? 's need' : ' needs'} your attention.`}
           </p>
         </div>
       </div>
 
-      {d && jobs.length > 0 && (
-        <div className="todaybox">
-          <div className="todayhead">
-            <span>Needs you today</span>
-            <span className="todaycount">{jobs.length}</span>
-          </div>
-          {jobs.slice(0, 6).map((j, i) => (
-            <a key={i} className={'job ' + j.tone} href={j.href}>
-              <span className="jdot" />
-              <span className="jbody">
-                <span className="jwhat">{j.what}</span>
-                <span className="jwhy">{j.why}</span>
-              </span>
-              <span className="jgo">→</span>
-            </a>
-          ))}
-          {jobs.length > 6 && (
-            <a className="todaymore" href="/onboarding">
-              and {jobs.length - 6} more across the tiles →
-            </a>
-          )}
+      {d && total > 0 && (
+        <div className="lanes">
+          <Lane kind="leaving" title="Leaving" icon="←"
+            blurb="Collect the device, close their access"
+            items={leaving} href="/offboarding" />
+          <Lane kind="joining" title="Joining" icon="→"
+            blurb="Set them up before they start"
+            items={joining} href="/onboarding" />
+          <Lane kind="expiring" title="Expiring" icon="!"
+            blurb="Licences and cards due for renewal"
+            items={expiring} href="/documents" />
         </div>
       )}
 
