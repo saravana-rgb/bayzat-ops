@@ -3,11 +3,11 @@
 export const commonCss = `
 /* ============================================================
    THE PALETTE — everything colourful in the app comes from here.
-
+ 
    Default is Clay: burnt sienna on warm paper, with deep teal,
    aubergine, olive and steel as the supporting hues. Deliberately
    not a corporate blue.
-
+ 
    To try another, replace the four --accent lines and the six --s
    lines with one of the sets at the bottom of this block. Nothing
    else needs touching.
@@ -15,17 +15,17 @@ export const commonCss = `
 :root{
   --canvas:#FBF9F5; --surface:#FFFFFF; --sunk:#F7F3EC;
   --line:#E6DFD3; --line2:#F1EBE1;
-
+ 
   --ink:#1F1B16; --ink2:#5A5348; --ink3:#8F8779;
-
+ 
   /* the one colour for things you can act on */
   --accent:#B14A2E; --accent-ink:#8C3820; --accent-soft:#FAEDE7;
-
+ 
   /* status — these keep their meaning whatever the accent is */
   --emerald:#3F6B3A; --emerald-soft:#EEF3EC;
   --amber:#A66A15;   --amber-soft:#FBF2E4;
   --rose:#9B2C36;    --rose-soft:#FAEBEC;
-
+ 
   /* the six onboarding steps and the document categories */
   --s1:#1F5F5B; --s1-soft:#E7F0EF;
   --s2:#B14A2E; --s2-soft:#FAEDE7;
@@ -33,26 +33,26 @@ export const commonCss = `
   --s4:#4A6B22; --s4-soft:#EFF3E7;
   --s5:#8C5A1E; --s5-soft:#F8F0E4;
   --s6:#2E5E8C; --s6-soft:#E9EFF6;
-
+ 
   --font:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
   --r:5px; --r-lg:7px;
   --ease:cubic-bezier(.2,.8,.3,1);
 }
-
+ 
 /* ---- other palettes, swap in if Clay is not right ----------------
-
+ 
    AUBERGINE — deep purple on paper, cooler and more formal
    --accent:#6B2D5C; --accent-ink:#54234A; --accent-soft:#F4EBF2;
    --s1:#6B2D5C; --s2:#1F5F5B; --s3:#8C5A1E; --s4:#2E5E8C; --s5:#9B2C36; --s6:#4A6B22;
-
+ 
    FOREST — deep green, calm and quiet
    --accent:#2F5D3A; --accent-ink:#254B2E; --accent-soft:#EAF1EC;
    --s1:#2F5D3A; --s2:#8C5A1E; --s3:#1F5F5B; --s4:#6B2D5C; --s5:#B14A2E; --s6:#2E5E8C;
-
+ 
    INK — near-black with a single copper highlight, most restrained
    --accent:#2B2A28; --accent-ink:#000000; --accent-soft:#EFEDE9;
    --s1:#8C5A1E; --s2:#2B2A28; --s3:#1F5F5B; --s4:#6B2D5C; --s5:#4A6B22; --s6:#9B2C36;
-
+ 
    OCEAN — teal-led, brighter and more modern
    --accent:#0E6E68; --accent-ink:#0A5450; --accent-soft:#E5F2F1;
    --s1:#0E6E68; --s2:#B14A2E; --s3:#2E5E8C; --s4:#8C5A1E; --s5:#6B2D5C; --s6:#4A6B22;
@@ -77,7 +77,7 @@ h1,h2,h3,p{margin:0}
   color:var(--ink3);font-weight:400}
 .back{font-size:12.5px;font-weight:500;color:var(--ink2);padding:6px 0;border-bottom:1px solid var(--line)}
 .back:hover{color:var(--ink);border-color:var(--ink)}
-
+ 
 /* ---------------------------------------------------------- tiles */
 .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(262px,1fr));gap:16px}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
@@ -105,7 +105,7 @@ h1,h2,h3,p{margin:0}
 .tile.soon{opacity:.45;pointer-events:none;border-style:dashed}
 .tile.soon .ico{background:var(--line2);color:var(--ink3)}
 .badges{display:flex;gap:7px;flex-wrap:wrap}
-
+ 
 /* ---------------------------------------------------------- chips */
 .chip{font-size:11px;font-weight:500;border-radius:3px;padding:3px 7px;white-space:nowrap;
   display:inline-block;border:1px solid transparent}
@@ -116,7 +116,7 @@ h1,h2,h3,p{margin:0}
 .chip.accent{background:var(--accent-soft);color:var(--accent)}
 .chip.violet{background:var(--s3-soft);color:var(--s3)}
 .chip.teal{background:var(--s4-soft);color:var(--s4)}
-
+ 
 /* ---------------------------------------------------------- stats */
 .stats{display:flex;gap:0;flex-wrap:wrap;margin-bottom:30px;border:1px solid var(--line);
   border-radius:var(--r-lg);background:var(--surface);overflow:hidden}
@@ -142,7 +142,7 @@ h1,h2,h3,p{margin:0}
 .stat.warm::before{background:var(--amber)} .stat.warm b{color:var(--amber)}
 .stat.good::before{background:var(--emerald)} .stat.good b{color:var(--emerald)}
 .stat.calm::before{background:var(--accent)}  .stat.calm b{color:var(--accent)}
-
+ 
 /* -------------------------------------------------------- headings */
 .sec{font-size:12.5px;font-weight:600;letter-spacing:0;color:var(--ink);
   margin:34px 0 14px;display:flex;align-items:center;gap:10px;text-transform:none}
@@ -151,7 +151,7 @@ h1,h2,h3,p{margin:0}
 .sec.hot::before{background:var(--rose)}
 .sec.hot{color:var(--rose)}
 .grid{display:grid;gap:14px}
-
+ 
 /* -------------------------------------------------------- controls */
 .mini{border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:var(--r);
   padding:7px 13px;font:500 12px var(--font);cursor:pointer;transition:all .15s var(--ease)}
@@ -173,7 +173,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--ink)}
 input::placeholder{color:var(--ink3)}
 label{display:block;font-size:11px;font-weight:500;letter-spacing:0;color:var(--ink3);
   margin-bottom:7px;text-transform:none}
-
+ 
 /* ----------------------------------------------------------- panel */
 .veil{position:fixed;inset:0;background:rgba(28,25,23,.32);z-index:40;display:flex;
   align-items:center;justify-content:center;padding:20px;animation:fade .18s var(--ease)}
@@ -243,12 +243,12 @@ label{display:block;font-size:11px;font-weight:500;letter-spacing:0;color:var(--
   .src{align-items:flex-start;flex-wrap:wrap}
   .src-act{margin-left:0;width:100%}
 }
-
+ 
 /* used by more than one tile, so it lives here */
 .note{margin-top:11px;font-size:12.5px;padding:9px 11px}
 .busy{background:var(--sunk);border:1px solid var(--line);border-radius:var(--r);
   padding:11px 15px;font:400 13px var(--font);color:var(--ink2);margin-bottom:18px}
-
+ 
 /* ---- chart primitives, drawn by more than one tile ---- */
 .mrow{display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--line2);
   flex-wrap:wrap}
@@ -288,7 +288,7 @@ label{display:block;font-size:11px;font-weight:500;letter-spacing:0;color:var(--
   border-radius:var(--r);padding:8px 14px;font:500 12.5px var(--font);cursor:pointer}
 .monthchip:hover{border-color:var(--ink);color:var(--ink)}
 .monthchip[data-on="1"]{background:var(--ink);border-color:var(--ink);color:#fff}
-
+ 
 /* confirmation dialogs, used by more than one tile */
 .danger-zone{display:flex;gap:16px;align-items:center;border:1px solid var(--line);
   border-left:2px solid var(--rose);border-radius:0 var(--r) var(--r) 0;padding:16px 18px;
@@ -321,7 +321,7 @@ label{display:block;font-size:11px;font-weight:500;letter-spacing:0;color:var(--
 .btn.danger{background:var(--rose);border-color:var(--rose)}
 .btn.danger:hover{background:#7F2029;border-color:#7F2029}
 .btn.danger:disabled{background:var(--line);border-color:var(--line);color:var(--ink3)}
-
+ 
 /* ---- person cards and checklists, used by more than one tile ---- */
 .pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
   overflow:hidden;cursor:pointer;transition:border-color .18s var(--ease)}
@@ -385,40 +385,55 @@ label{display:block;font-size:11px;font-weight:500;letter-spacing:0;color:var(--
 .tcell.bad{color:var(--rose)} .tcell.dim{color:var(--ink3);font-weight:400}
 .thead{display:flex;align-items:center;gap:14px;padding:0 0 11px;border-bottom:1px solid var(--line);
   font:500 11px var(--font);color:var(--ink3);text-transform:none;letter-spacing:0}
-
+ 
 /* ---------------------------------------------------- the home page */
 .hello{display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:22px}
 .hello h2{font-size:23px;font-weight:600;letter-spacing:-.6px}
 .hello p{font-size:14px;color:var(--ink3);margin-top:8px}
 kbd{font:500 11px var(--font);background:var(--surface);border:1px solid var(--line);
   border-bottom-width:2px;border-radius:4px;padding:2px 6px;color:var(--ink2);margin:0 2px}
-
-.todaybox{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
-  overflow:hidden;margin-bottom:30px}
-.todayhead{display:flex;align-items:center;gap:10px;padding:14px 18px;
-  border-bottom:1px solid var(--line2);background:var(--sunk);
-  font:600 11px var(--font);letter-spacing:.8px;text-transform:uppercase;color:var(--ink2)}
-.todaycount{margin-left:auto;font:600 11px var(--font);background:var(--rose);color:#fff;
-  border-radius:20px;padding:2px 9px;letter-spacing:0}
-.job{display:flex;align-items:center;gap:14px;padding:14px 18px;
-  border-bottom:1px solid var(--line2);border-left:3px solid transparent;
-  transition:background .13s var(--ease)}
-.job:last-of-type{border-bottom:0}
-.job:hover{background:var(--sunk)}
-.job.rose{border-left-color:var(--rose)}
-.job.amber{border-left-color:var(--amber)}
-.job.blue{border-left-color:var(--s1)}
-.jdot{width:8px;height:8px;border-radius:50%;flex:none}
-.job.rose .jdot{background:var(--rose)}
-.job.amber .jdot{background:var(--amber)}
-.job.blue .jdot{background:var(--s1)}
-.jbody{flex:1;min-width:150px;display:grid;gap:3px}
-.jwhat{font-size:14.5px;font-weight:600;color:var(--ink)}
-.jwhy{font-size:12.5px;color:var(--ink3);line-height:1.5}
-.jgo{color:var(--line);font-size:16px;flex:none;transition:color .13s var(--ease)}
-.job:hover .jgo{color:var(--ink2)}
-.todaymore{display:block;padding:12px 18px;font-size:12.5px;color:var(--ink3);
+ 
+.lanes{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:14px;
+  margin-bottom:30px;align-items:start}
+ 
+.lane{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--line);
+  border-radius:0 0 var(--r-lg) var(--r-lg);overflow:hidden}
+.lane.leaving{border-top-color:var(--rose)}
+.lane.joining{border-top-color:var(--s4)}
+.lane.expiring{border-top-color:var(--amber)}
+.lane.quiet{opacity:.62}
+ 
+.lanehead{display:flex;align-items:center;gap:12px;padding:15px 16px 13px;
+  border-bottom:1px solid var(--line2);transition:background .13s var(--ease)}
+.lanehead:hover{background:var(--sunk)}
+.laneicon{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
+  font:600 14px var(--font);flex:none}
+.lane.leaving .laneicon{background:var(--rose-soft);color:var(--rose)}
+.lane.joining .laneicon{background:var(--s4-soft);color:var(--s4)}
+.lane.expiring .laneicon{background:var(--amber-soft);color:var(--amber)}
+.lanetitle{flex:1;min-width:0;font:600 14.5px var(--font);color:var(--ink);display:grid;gap:2px}
+.laneblurb{font:400 11.5px var(--font);color:var(--ink3)}
+.lanecount{font:600 13px var(--font);color:var(--ink3);background:var(--line2);
+  border-radius:20px;padding:3px 11px;flex:none}
+.lanecount.hot{background:var(--rose);color:#fff}
+ 
+.lanelist{display:grid}
+.laneitem{display:grid;gap:2px;padding:12px 16px;border-bottom:1px solid var(--line2);
+  border-left:3px solid transparent;transition:all .13s var(--ease)}
+.laneitem:last-of-type{border-bottom:0}
+.laneitem:hover{background:var(--sunk)}
+.lane.leaving .laneitem.urgent{border-left-color:var(--rose);background:#FFFDFD}
+.lane.joining .laneitem.urgent{border-left-color:var(--s4)}
+.lane.expiring .laneitem.urgent{border-left-color:var(--amber);background:#FFFDF8}
+.liname{font-size:14px;font-weight:600;color:var(--ink)}
+.liwhen{font-size:12px;font-weight:500}
+.lane.leaving .liwhen{color:var(--rose)}
+.lane.joining .liwhen{color:var(--s4)}
+.lane.expiring .liwhen{color:var(--amber)}
+.liwhy{font-size:12px;color:var(--ink3)}
+.lanenone{padding:20px 16px;font-size:12.5px;color:var(--ink3);text-align:center}
+.lanemore{display:block;padding:11px 16px;font-size:12.5px;color:var(--ink3);
   background:var(--sunk);border-top:1px solid var(--line2)}
-.todaymore:hover{color:var(--ink)}
-
+.lanemore:hover{color:var(--ink)}
+ 
 `;
