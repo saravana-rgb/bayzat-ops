@@ -33,6 +33,14 @@ export const tiles = [
     live: true
   },
   {
+    slug: 'master',
+    name: 'Master employees',
+    blurb: 'The full HR record — role, contract, visa, insurance — synced from the Master sheet.',
+    href: '/master',
+    icon: 'master',
+    live: true
+  },
+  {
     slug: 'onboarding',
     name: 'Onboarding',
     blurb: 'New joiners, the six IT steps they need, and the monthly report.',
