@@ -154,4 +154,10 @@ textarea:focus{border-color:var(--ink)}
 .docchip[data-on="1"] .dn{background:rgba(255,255,255,.2);color:#fff}
 
 .docdate b{font-weight:600;color:var(--ink)}
+
+.gaprow{align-items:flex-start}
+.gapchips{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;
+  max-width:60%}
+.gapchips .chip{cursor:default}
+.nocheck{width:16px;flex:none}
 `;
