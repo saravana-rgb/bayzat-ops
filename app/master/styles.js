@@ -117,4 +117,11 @@ textarea{width:100%;background:var(--surface);border:1px solid var(--line);
   outline:none;resize:vertical;line-height:1.6}
 textarea:focus{border-color:var(--ink)}
 @media(max-width:820px){.docname,.docdate{width:auto}}
+
+.insbar{display:flex;height:34px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line)}
+.insseg{display:flex;align-items:center;justify-content:center;font:600 11.5px var(--font);
+  color:#fff;white-space:nowrap;overflow:hidden}
+.insseg.covered{background:var(--s4)}
+.insseg.none{background:var(--rose)}
+.insseg.unknown{background:var(--ink3)}
 `;
