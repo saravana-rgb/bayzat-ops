@@ -11,8 +11,7 @@ const DOCS = [
   ['all',         'Everything'],
   ['visa',        'Residency visa'],
   ['passport',    'Passport'],
-  ['emirates_id', 'Emirates ID'],
-  ['probation',   'Probation']
+  ['emirates_id', 'Emirates ID']
 ];
 
 const STATES = {
@@ -34,14 +33,16 @@ export default function Documents({ actor }) {
   const [chasing, setChasing] = useState(false);
   const [renewing, setRenewing] = useState(null);
   const [view, setView] = useState('expiry');
+  const [ins, setIns] = useState([]);
 
   const load = useCallback(async () => {
-    const [d, g] = await Promise.all([
+    const [d, g, i] = await Promise.all([
       supabase.from('v_document_expiry').select('*').order('expires'),
-      supabase.from('v_compliance_gaps').select('*')
+      supabase.from('v_compliance_gaps').select('*'),
+      supabase.from('v_insurance').select('*')
     ]);
     if (d.error) { setError(d.error.message); return; }
-    setError(''); setRows(d.data || []); setGaps(g.data || []);
+    setError(''); setRows(d.data || []); setGaps(g.data || []); setIns(i.data || []);
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -108,13 +109,62 @@ export default function Documents({ actor }) {
           <button data-on={view === 'gaps' ? '1' : '0'} onClick={() => setView('gaps')}>
             Missing · {gaps.length}
           </button>
+          <button data-on={view === 'insurance' ? '1' : '0'} onClick={() => setView('insurance')}>
+            Insurance · {ins.filter(r => r.cover === 'none' || r.cover === 'unknown').length}
+          </button>
         </div>
         <input className="search" value={q} placeholder="Search name, email or ID"
           onChange={e => setQ(e.target.value)} />
         <button className="mini" onClick={load}>Refresh</button>
       </div>
 
-      {view === 'gaps' ? (
+      {view === 'insurance' ? (
+        (() => {
+          const active = ins.filter(r => r.cover !== 'inactive');
+          const none = active.filter(r => r.cover === 'none');
+          const unknown = active.filter(r => r.cover === 'unknown');
+          const covered = active.filter(r => r.cover === 'covered');
+          const show = [...none, ...unknown].filter(r => !term ||
+            [r.person, r.work_email, r.department].some(v =>
+              (v || '').toLowerCase().includes(term)));
+          return (
+            <>
+              <div className="insbar">
+                <span className="insseg covered" style={{
+                  flex: covered.length || 0.01 }}>{covered.length} covered</span>
+                <span className="insseg none" style={{
+                  flex: none.length || 0.01 }}>{none.length ? none.length + ' none' : ''}</span>
+                <span className="insseg unknown" style={{
+                  flex: unknown.length || 0.01 }}>{unknown.length ? unknown.length + ' unknown' : ''}</span>
+              </div>
+              <p className="note-txt" style={{ margin: '12px 0 16px', lineHeight: 1.6 }}>
+                The sheet records insurance as Yes or No, with no renewal date, so this is a
+                state rather than something that expires. Only people without cover, or with
+                nothing recorded, are listed below.
+              </p>
+              {show.length === 0
+                ? <div className="empty"><b>Everyone is covered</b>
+                    <span>Every active employee has medical insurance recorded.</span></div>
+                : <div className="people">
+                    {show.map(r => (
+                      <div key={r.employee_id} className="person">
+                        <span className="who">
+                          <span className="nm">{r.person}</span>
+                          <span className="sub">
+                            {r.department || 'no department'} · {r.location || '—'}
+                            {r.insurance_category ? ' · ' + r.insurance_category : ''}
+                          </span>
+                        </span>
+                        <span className={'chip ' + (r.cover === 'none' ? 'red' : 'grey')}>
+                          {r.cover === 'none' ? 'No insurance' : 'Not recorded'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>}
+            </>
+          );
+        })()
+      ) : view === 'gaps' ? (
         gaps.length === 0
           ? <div className="empty"><b>Nothing missing</b>
               <span>Every active employee has what they need on record.</span></div>
