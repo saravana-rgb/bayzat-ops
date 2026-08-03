@@ -90,4 +90,31 @@ export const masterCss = `
 @media(max-width:820px){.hide-sm{display:none}.kv td:first-child{width:auto}}
 .panel.wide{max-width:760px}
 .person .ini.leaver{background:var(--line2);color:var(--ink3)}
+
+/* the documents view */
+.person.doc{gap:13px}
+.person input[type=checkbox]{width:16px;height:16px;flex:none;margin:0;accent-color:#B14A2E;
+  cursor:pointer}
+.person.doc.expired{border-left:3px solid var(--rose);background:#FFFCFC}
+.person.doc.critical{border-left:3px solid var(--rose)}
+.person.doc.soon{border-left:3px solid var(--amber)}
+.person.doc.inactive{opacity:.55}
+.docname{width:130px;flex:none;font-size:12.5px;font-weight:500;color:var(--ink2)}
+.docdate{width:170px;flex:none;display:flex;align-items:center;gap:9px;font-size:12.5px;
+  color:var(--ink2)}
+
+.bulkbar{display:flex;align-items:center;gap:12px;background:var(--ink);color:#fff;
+  border-radius:var(--r-lg);padding:13px 18px;margin-bottom:14px;flex-wrap:wrap}
+.bulkbar b{font-size:15px}
+.bulkbar span{font-size:13px}
+.bulkbar .btn{margin-left:auto;background:#fff;color:var(--ink);border-color:#fff}
+.bulkbar .btn:hover{background:var(--sunk)}
+.bulkbar .mini{background:transparent;border-color:rgba(255,255,255,.3);color:#fff}
+.bulkbar .mini:hover{background:rgba(255,255,255,.12);color:#fff;border-color:#fff}
+
+textarea{width:100%;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r);padding:10px 12px;font:400 13px var(--font);color:var(--ink);
+  outline:none;resize:vertical;line-height:1.6}
+textarea:focus{border-color:var(--ink)}
+@media(max-width:820px){.docname,.docdate{width:auto}}
 `;
