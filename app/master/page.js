@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AuthGate, Bar, supabase } from '../common/shared';
+import Documents from './documents';
 import { GROUPS, PRIVATE_FIELDS, expiryChip, fullName, initials, insuranceGap,
          money, pretty, warningsFor } from './shared';
 
@@ -11,14 +12,27 @@ export default function MasterPage() {
 }
 
 function Shell() {
+  const [view, setView] = useState('people');
+  const [email, setEmail] = useState('');
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email || ''));
+  }, []);
   return (
     <div className="wrap">
       <Bar
         title="Master employees"
-        sub="The full HR record, synced from the Master sheet"
+        sub={view === 'people'
+          ? 'The full HR record, synced from the Master sheet'
+          : 'Documents that have lapsed or are about to, and what is missing'}
         right={<a className="back" href="/">← All tiles</a>}
       />
-      <Directory />
+      <div className="viewswitch">
+        <button data-on={view === 'people' ? '1' : '0'}
+          onClick={() => setView('people')}>People</button>
+        <button data-on={view === 'docs' ? '1' : '0'}
+          onClick={() => setView('docs')}>Documents</button>
+      </div>
+      {view === 'people' ? <Directory /> : <Documents actor={email} />}
     </div>
   );
 }
@@ -140,6 +154,7 @@ function Directory() {
           <button className="mini" onClick={() => setFacet({ key: '', value: '' })}>Clear</button>
         )}
         <span className="count">{list.length} shown</span>
+        <button className="mini" onClick={load}>Refresh</button>
         <button className="mini" onClick={exportCsv}>Export</button>
       </div>
 
