@@ -120,7 +120,9 @@ export default function Documents({ actor }) {
 
       {view === 'insurance' ? (
         (() => {
-          const active = ins.filter(r => r.cover !== 'inactive');
+          // only UAE employees — insurance elsewhere is handled locally and
+          // the sheet does not track it
+          const active = ins.filter(r => r.cover !== 'inactive' && r.uae);
           const none = active.filter(r => r.cover === 'none');
           const unknown = active.filter(r => r.cover === 'unknown');
           const covered = active.filter(r => r.cover === 'covered');
@@ -138,9 +140,9 @@ export default function Documents({ actor }) {
                   flex: unknown.length || 0.01 }}>{unknown.length ? unknown.length + ' unknown' : ''}</span>
               </div>
               <p className="note-txt" style={{ margin: '12px 0 16px', lineHeight: 1.6 }}>
-                The sheet records insurance as Yes or No, with no renewal date, so this is a
-                state rather than something that expires. Only people without cover, or with
-                nothing recorded, are listed below.
+                UAE employees only — insurance elsewhere is arranged locally and the sheet
+                does not track it. Recorded as Yes or No with no renewal date, so this is a
+                state rather than something that expires.
               </p>
               {show.length === 0
                 ? <div className="empty"><b>Everyone is covered</b>
