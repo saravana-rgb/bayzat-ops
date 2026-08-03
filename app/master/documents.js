@@ -26,6 +26,13 @@ function ago(d) {
   return n === 0 ? 'today' : past ? t + ' ago' : 'in ' + t;
 }
 
+/* Two kinds of gap, because they need two different people.
+   Documents are things the employee holds and can send us. Records are
+   things only HR or the manager can fill in — emailing someone to ask for
+   their own contract type would be absurd. */
+const DOC_ITEMS = ['Passport', 'Emirates ID', 'Residency visa'];
+const isDocGap = (item) => DOC_ITEMS.includes(item);
+
 const STATES = {
   expired:  { label: 'Expired',       cls: 'red' },
   critical: { label: 'Within 30 days', cls: 'red' },
@@ -46,6 +53,9 @@ export default function Documents({ actor }) {
   const [renewing, setRenewing] = useState(null);
   const [view, setView] = useState('expiry');
   const [ins, setIns] = useState([]);
+  const [gapKind, setGapKind] = useState('all');
+  const [gapPicked, setGapPicked] = useState({});
+  const [chasingGaps, setChasingGaps] = useState(false);
 
   const load = useCallback(async () => {
     const [d, g, i] = await Promise.all([
@@ -65,6 +75,17 @@ export default function Documents({ actor }) {
       p_ids: ids, p_document: document, p_note: text, p_actor: actor });
     if (error) { setError(error.message); return; }
     setChasing(false); setPicked({});
+    note(`Reminder queued for ${data?.chased || ids.length} — it sends within a few minutes`);
+    load();
+  }
+
+  /** Asking for a document we have no date for at all — the same queue as
+   *  an expiry chase, so it sends through the same worker. */
+  async function chaseGaps(ids, text) {
+    const { data, error } = await supabase.rpc('chase_documents', {
+      p_ids: ids, p_document: 'missing', p_note: text, p_actor: actor });
+    if (error) { setError(error.message); return; }
+    setChasingGaps(false); setGapPicked({});
     note(`Reminder queued for ${data?.chased || ids.length} — it sends within a few minutes`);
     load();
   }
@@ -189,21 +210,112 @@ export default function Documents({ actor }) {
           );
         })()
       ) : view === 'gaps' ? (
-        gaps.length === 0
-          ? <div className="empty"><b>Nothing missing</b>
-              <span>Every active employee has what they need on record.</span></div>
-          : <div className="people">
-              {gaps.map((g, i) => (
-                <div key={i} className="person">
-                  <span className="who">
-                    <span className="nm">{g.person}</span>
-                    <span className="sub">{g.department || 'no department'} · {g.location || '—'}</span>
+        (() => {
+          /* one row per person, not one per missing field */
+          const byPerson = {};
+          gaps.forEach(g => {
+            const p = byPerson[g.employee_id] || (byPerson[g.employee_id] = {
+              id: g.employee_id, person: g.person, email: g.work_email,
+              department: g.department, location: g.location, docs: [], records: []
+            });
+            (isDocGap(g.item) ? p.docs : p.records).push(g);
+          });
+
+          let people = Object.values(byPerson);
+          if (gapKind === 'docs') people = people.filter(p => p.docs.length);
+          if (gapKind === 'records') people = people.filter(p => p.records.length);
+          if (term) people = people.filter(p =>
+            [p.person, p.email, p.department].some(v => (v || '').toLowerCase().includes(term)));
+          people.sort((a, b) => (b.docs.length + b.records.length)
+                              - (a.docs.length + a.records.length));
+
+          const chaseable = people.filter(p => p.docs.length && p.email);
+          const gapIds = Object.keys(gapPicked).filter(k => gapPicked[k]);
+
+          return (
+            <>
+              <div className="docchips">
+                <button className="docchip" data-on={gapKind === 'all' ? '1' : '0'}
+                  onClick={() => setGapKind('all')}>
+                  Everyone<span className="dn">{Object.keys(byPerson).length}</span>
+                </button>
+                <button className="docchip" data-on={gapKind === 'docs' ? '1' : '0'}
+                  onClick={() => setGapKind('docs')}>
+                  Missing documents
+                  <span className="dn">
+                    {Object.values(byPerson).filter(p => p.docs.length).length}
                   </span>
-                  <span className="chip amber">{g.item}</span>
-                  <span className="note-txt" style={{ width: 190, flex: 'none' }}>{g.why}</span>
+                </button>
+                <button className="docchip" data-on={gapKind === 'records' ? '1' : '0'}
+                  onClick={() => setGapKind('records')}>
+                  Missing details
+                  <span className="dn">
+                    {Object.values(byPerson).filter(p => p.records.length).length}
+                  </span>
+                </button>
+                {chaseable.length > 0 && (
+                  <button className="mini" style={{ marginLeft: 'auto' }} onClick={() => {
+                    const all = {};
+                    if (gapIds.length !== chaseable.length)
+                      chaseable.forEach(p => { all[p.id] = true; });
+                    setGapPicked(all);
+                  }}>
+                    {gapIds.length === chaseable.length
+                      ? 'Clear selection'
+                      : `Select all ${chaseable.length} we can email`}
+                  </button>
+                )}
+              </div>
+
+              {gapIds.length > 0 && (
+                <div className="bulkbar">
+                  <span><b>{gapIds.length}</b> selected</span>
+                  <button className="btn" onClick={() => setChasingGaps(true)}>
+                    Ask them for their documents
+                  </button>
+                  <button className="mini" onClick={() => setGapPicked({})}>Clear</button>
                 </div>
-              ))}
-            </div>
+              )}
+
+              <p className="note-txt" style={{ marginBottom: 14, lineHeight: 1.6 }}>
+                Documents are things the employee can send us. Details like a manager or a
+                contract type are ours to fill in, so they are listed separately and there is
+                nobody to email about them.
+              </p>
+
+              {people.length === 0
+                ? <div className="empty"><b>Nothing missing</b>
+                    <span>Every active employee has what they need on record.</span></div>
+                : <div className="people">
+                    {people.map(p => (
+                      <div key={p.id} className="person gaprow">
+                        {p.docs.length > 0 && p.email
+                          ? <input type="checkbox" checked={!!gapPicked[p.id]}
+                              onChange={() => setGapPicked(g =>
+                                ({ ...g, [p.id]: !g[p.id] }))} />
+                          : <span className="nocheck" />}
+                        <span className="who">
+                          <span className="nm">{p.person}</span>
+                          <span className="sub">
+                            {p.department || 'no department'}
+                            {p.location ? ' · ' + p.location : ''}
+                            {!p.email && ' · no work email'}
+                          </span>
+                        </span>
+                        <span className="gapchips">
+                          {p.docs.map(g => (
+                            <span key={g.item} className="chip red" title={g.why}>{g.item}</span>
+                          ))}
+                          {p.records.map(g => (
+                            <span key={g.item} className="chip grey" title={g.why}>{g.item}</span>
+                          ))}
+                        </span>
+                      </div>
+                    ))}
+                  </div>}
+            </>
+          );
+        })()
       ) : (
         <>
           <div className="docchips">
@@ -289,6 +401,11 @@ export default function Documents({ actor }) {
 
       {renewing && <RenewDialog row={renewing} onCancel={() => setRenewing(null)}
         onSave={(d, t) => renew(renewing, d, t)} />}
+
+      {chasingGaps && <ChaseDialog
+        count={Object.keys(gapPicked).filter(k => gapPicked[k]).length}
+        doc="missing" onCancel={() => setChasingGaps(false)}
+        onSend={text => chaseGaps(Object.keys(gapPicked).filter(k => gapPicked[k]), text)} />}
     </>
   );
 }
@@ -307,9 +424,12 @@ const Card = ({ n, l, note, tone, on, onClick }) => (
 );
 
 function ChaseDialog({ count, doc, onCancel, onSend }) {
+  const missing = doc === 'missing';
   const label = DOCS.find(d => d[0] === doc)?.[1] || 'document';
-  const [text, setText] = useState(
-    `Please send us an up to date copy of your ${label.toLowerCase()} so we can update our records.`);
+  const [text, setText] = useState(missing
+    ? 'We do not have a copy of your passport, Emirates ID or residency visa on file. '
+      + 'Please send them across so we can complete your record.'
+    : `Please send us an up to date copy of your ${label.toLowerCase()} so we can update our records.`);
   return (
     <div className="veil" onClick={e => { if (e.target === e.currentTarget) onCancel(); }}>
       <div className="panel confirm">
