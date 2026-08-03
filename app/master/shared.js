@@ -140,12 +140,12 @@ export const initials = (e) =>
 export const fullName = (e) =>
   e.full_name || [e.first_name, e.last_name].filter(Boolean).join(' ').trim();
 
-/* Everything with a date that can lapse. Visa and Emirates ID are access
-   matters; probation and contract are people ones. All of them are easier
-   to act on early than to explain late. */
+/* The three documents that genuinely lapse and need chasing. Probation is
+   deliberately absent — it passes on its own and nobody renews it. Medical
+   insurance has no date on the sheet, only Yes or No, so it is handled as a
+   gap rather than an expiry. */
 export const WATCHED = [
   { key: 'visa_expiry',     label: 'Visa',            warn: 60, group: 'Visa and residency' },
-  { key: 'probation_end',   label: 'Probation ends',  warn: 30, group: 'Employment', soft: true },
   { key: 'passport_expiry', label: 'Passport',        warn: 90, group: 'Confidential', private: true },
   { key: 'emirates_expiry', label: 'Emirates ID',     warn: 60, group: 'Confidential', private: true }
 ];
