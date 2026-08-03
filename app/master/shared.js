@@ -140,12 +140,49 @@ export const initials = (e) =>
 export const fullName = (e) =>
   e.full_name || [e.first_name, e.last_name].filter(Boolean).join(' ').trim();
 
-/** Visa and probation are the two dates that need chasing. */
-export function expiryChip(iso, label) {
+/* Everything with a date that can lapse. Visa and Emirates ID are access
+   matters; probation and contract are people ones. All of them are easier
+   to act on early than to explain late. */
+export const WATCHED = [
+  { key: 'visa_expiry',     label: 'Visa',            warn: 60, group: 'Visa and residency' },
+  { key: 'probation_end',   label: 'Probation ends',  warn: 30, group: 'Employment', soft: true },
+  { key: 'passport_expiry', label: 'Passport',        warn: 90, group: 'Confidential', private: true },
+  { key: 'emirates_expiry', label: 'Emirates ID',     warn: 60, group: 'Confidential', private: true }
+];
+
+/** How a date reads when it is approaching. `soft` dates — probation — are
+ *  a prompt rather than a problem, so they never go red. */
+export function expiryChip(iso, label, warn = 60, soft = false) {
   const d = daysUntil(iso);
   if (d === null) return null;
-  if (d < 0)   return { cls: 'red',   text: `${label} expired ${-d}d ago` };
-  if (d <= 30) return { cls: 'red',   text: `${label} in ${d}d` };
-  if (d <= 60) return { cls: 'amber', text: `${label} in ${d}d` };
+  if (d < 0)  return soft
+    ? { cls: 'grey',  text: `${label} passed`, level: 0 }
+    : { cls: 'red',   text: `${label} expired ${-d}d ago`, level: 3 };
+  if (d === 0) return { cls: soft ? 'amber' : 'red', text: `${label} today`, level: 3 };
+  if (d <= Math.round(warn / 2))
+    return { cls: soft ? 'amber' : 'red', text: `${label} in ${d}d`, level: 2 };
+  if (d <= warn) return { cls: 'amber', text: `${label} in ${d}d`, level: 1 };
+  return null;
+}
+
+/** Every warning for one person, worst first. */
+export function warningsFor(e, priv) {
+  return WATCHED
+    .map(w => {
+      const v = w.private ? priv?.[w.key] : e[w.key];
+      const chip = expiryChip(v, w.label, w.warn, w.soft);
+      return chip ? { ...chip, key: w.key, date: v } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.level - a.level);
+}
+
+/** Medical insurance is a yes-or-no on the sheet, not a date — but a UAE
+ *  employee without it is a compliance gap worth surfacing. */
+export function insuranceGap(e) {
+  if (e.status !== 'active') return null;
+  const v = String(e.medical_insurance || '').trim().toLowerCase();
+  if (v === '' ) return { cls: 'grey',  text: 'Insurance not recorded' };
+  if (v === 'no' || v === 'false') return { cls: 'red', text: 'No medical insurance' };
   return null;
 }
