@@ -1,8 +1,8 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AuthGate, Bar, supabase } from '../common/shared';
-import { GROUPS, PRIVATE_FIELDS, expiryChip, fullName, initials,
-         money, pretty } from './shared';
+import { GROUPS, PRIVATE_FIELDS, expiryChip, fullName, initials, insuranceGap,
+         money, pretty, warningsFor } from './shared';
 
 const PER_PAGE = 25;
 
@@ -148,8 +148,8 @@ function Directory() {
             <span>Try a different search, or clear the filters.</span></div>
         : <div className="people">
             {list.slice(page * PER_PAGE, page * PER_PAGE + PER_PAGE).map(e => {
-              const visa = expiryChip(e.visa_expiry, 'Visa');
-              const prob = expiryChip(e.probation_end, 'Probation');
+              const warns = warningsFor(e, null);
+              const ins = insuranceGap(e);
               return (
                 <button key={e.id} className="person" onClick={() => setOpenId(e.id)}>
                   <span className={'ini' + (e.status === 'leaver' ? ' left' : '')}>
@@ -169,8 +169,9 @@ function Directory() {
                   <span className="col hide-sm">{e.legal_entity || '—'}</span>
                   <span className="col hide-sm">{e.location || '—'}</span>
                   <span className="flags">
-                    {visa && <span className={'chip ' + visa.cls}>{visa.text}</span>}
-                    {prob && !visa && <span className={'chip ' + prob.cls}>{prob.text}</span>}
+                    {warns.slice(0, 2).map(w =>
+                      <span key={w.key} className={'chip ' + w.cls}>{w.text}</span>)}
+                    {ins && !warns.length && <span className={'chip ' + ins.cls}>{ins.text}</span>}
                   </span>
                 </button>
               );
@@ -233,89 +234,121 @@ function Record({ e, onClose }) {
       .then(({ data }) => setPriv(data || { may_view: false }));
   }, [e.id]);
 
-  const visa = expiryChip(e.visa_expiry, 'Visa');
-  const prob = expiryChip(e.probation_end, 'Probation');
+  const warns = warningsFor(e, priv);
+  const ins = insuranceGap(e);
   const group = GROUPS.find(g => g.name === tab);
 
   const show = (v, type) => {
-    if (v === null || v === undefined || v === '') return <i className="none">not recorded</i>;
+    if (v === null || v === undefined || v === '' || v === 'N/A')
+      return <span className="none">—</span>;
     if (type === 'date') return pretty(v);
     if (type === 'money') return money(v, priv?.currency);
     return String(v);
   };
 
+  /* how many fields in a group actually have something in them — shown on
+     the tab, so an empty section is obvious before you open it */
+  const filled = (g) => g.fields.filter(([k]) => {
+    const v = e[k];
+    return v !== null && v !== undefined && v !== '' && v !== 'N/A';
+  }).length;
+
   return (
     <div className="veil" onClick={ev => { if (ev.target === ev.currentTarget) onClose(); }}>
       <div className="panel wide">
-        <div className="ph">
+        <div className="rechead">
           <span className="ini big">{initials(e)}</span>
-          <div>
-            <h2 style={{ fontSize: 18, fontWeight: 600 }}>{fullName(e)}</h2>
-            <div className="drawer-sub">
-              {e.title || 'no title'}{e.department ? ' · ' + e.department : ''}
-              {e.employee_id ? ' · ' + e.employee_id : ''}
-            </div>
+          <div className="recwho">
+            <h2>{fullName(e)}</h2>
+            <p>{e.title || 'no title'}{e.department ? ' · ' + e.department : ''}</p>
+            <p className="recmeta">
+              {e.employee_id && <span>ID {e.employee_id}</span>}
+              {e.work_email && <span>{e.work_email}</span>}
+              {e.location && <span>{e.location}</span>}
+            </p>
           </div>
           <button className="x" onClick={onClose}>✕</button>
         </div>
 
-        <div className="drawer-flags">
-          {e.employee_status && <span className="chip accent">{e.employee_status}</span>}
-          {visa && <span className={'chip ' + visa.cls}>{visa.text}</span>}
-          {prob && <span className={'chip ' + prob.cls}>{prob.text}</span>}
-          {e.hiring_date && <span className="chip grey">Joined {pretty(e.hiring_date)}</span>}
+        {(warns.length > 0 || ins) && (
+          <div className="recwarn">
+            {warns.map(w => (
+              <span key={w.key} className={'warnpill ' + w.cls}>
+                <b>{w.text}</b>
+                {w.date && <span>{pretty(w.date)}</span>}
+              </span>
+            ))}
+            {ins && <span className={'warnpill ' + ins.cls}><b>{ins.text}</b></span>}
+          </div>
+        )}
+
+        <div className="recfacts">
+          <Fact label="Status" value={e.employee_status || e.status} />
+          <Fact label="Joined" value={e.hiring_date ? pretty(e.hiring_date) : '—'} />
+          <Fact label="Tenure" value={e.tenure ? e.tenure + ' years' : '—'} />
+          <Fact label="Manager" value={e.reports_to || '—'} />
+          <Fact label="Entity" value={e.legal_entity || '—'} />
         </div>
 
         <div className="rtabs">
-          {GROUPS.map(g => (
-            <button key={g.name} data-on={tab === g.name ? '1' : '0'}
-              onClick={() => setTab(g.name)}>{g.name}</button>
-          ))}
-          {priv?.may_view && (
-            <button data-on={tab === 'Confidential' ? '1' : '0'}
-              onClick={() => setTab('Confidential')} className="conf">Confidential</button>
-          )}
+          {GROUPS.map(g => {
+            const n = filled(g);
+            return (
+              <button key={g.name} data-on={tab === g.name ? '1' : '0'}
+                className={n ? '' : 'thin'} onClick={() => setTab(g.name)}>
+                {g.name}<span className="tabn">{n}</span>
+              </button>
+            );
+          })}
+          <button data-on={tab === 'Confidential' ? '1' : '0'} className="conf"
+            onClick={() => setTab('Confidential')}>Confidential</button>
         </div>
 
         {tab === 'Confidential' ? (
-          <>
-            <p className="confnote">
-              Pay and identity documents. Visible because your address is listed as an HR
-              admin — everyone else gets nulls from the database, not a hidden field.
-            </p>
-            <table className="kv">
-              <tbody>
+          priv?.may_view ? (
+            <>
+              <p className="confnote">
+                Pay and identity documents. You can see these because your address is listed
+                as an HR admin.
+              </p>
+              <div className="pairs">
                 {PRIVATE_FIELDS.map(([k, label, type]) => (
-                  <tr key={k}>
-                    <td>{label}</td>
-                    <td>{show(priv?.[k], type)}</td>
-                  </tr>
+                  <div key={k} className="pair">
+                    <span className="pk">{label}</span>
+                    <span className="pv">{show(priv?.[k], type)}</span>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </>
+              </div>
+            </>
+          ) : (
+            <div className="locked">
+              <span className="lockmark">Restricted</span>
+              <b>Not authorised</b>
+              <p>
+                Pay, passport, Emirates ID, date of birth and home address are held for this
+                person. Only named HR admins can see them, and the restriction is enforced by
+                the database rather than hidden in this page.
+              </p>
+              <p className="lockwho">Ask Saravana if you need access.</p>
+            </div>
+          )
         ) : (
-          <table className="kv">
-            <tbody>
-              {group.fields.map(([k, label, type]) => (
-                <tr key={k}>
-                  <td>{label}</td>
-                  <td>{show(e[k], type)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="pairs">
+            {group.fields.map(([k, label, type]) => (
+              <div key={k} className="pair">
+                <span className="pk">{label}</span>
+                <span className="pv">{show(e[k], type)}</span>
+              </div>
+            ))}
+          </div>
         )}
 
-        {!priv?.may_view && priv !== null && (
-          <p className="confnote muted">
-            Pay, passport, Emirates ID, date of birth and home address are held for this
-            person but not shown to you. Ask Saravana if you need them.
-          </p>
-        )}
-
-        <button className="btn ghost" style={{ marginTop: 18 }} onClick={onClose}>Close</button>
+        <button className="btn ghost" style={{ marginTop: 20 }} onClick={onClose}>Close</button>
       </div>
     </div>
   );
 }
+
+const Fact = ({ label, value }) => (
+  <div className="fact"><span>{label}</span><b>{value}</b></div>
+);
