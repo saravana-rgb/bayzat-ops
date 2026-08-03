@@ -14,6 +14,18 @@ const DOCS = [
   ['emirates_id', 'Emirates ID']
 ];
 
+/** 4202 days ago is a number; "11 years ago" is a fact. */
+function ago(d) {
+  const n = Math.abs(d);
+  const past = d < 0;
+  let t;
+  if (n === 0) t = 'today';
+  else if (n < 31) t = n + ' day' + (n > 1 ? 's' : '');
+  else if (n < 365) t = Math.round(n / 30) + ' month' + (n >= 45 ? 's' : '');
+  else t = (Math.round(n / 36.5) / 10) + ' years';
+  return n === 0 ? 'today' : past ? t + ' ago' : 'in ' + t;
+}
+
 const STATES = {
   expired:  { label: 'Expired',       cls: 'red' },
   critical: { label: 'Within 30 days', cls: 'red' },
@@ -81,6 +93,8 @@ export default function Documents({ actor }) {
   });
 
   const ids = Object.keys(picked).filter(k => picked[k]);
+  const insGap = ins.filter(r => r.uae && r.cover !== 'inactive'
+    && (r.cover === 'none' || r.cover === 'unknown')).length;
   const counts = {
     expired: rows.filter(r => r.state === 'expired').length,
     critical: rows.filter(r => r.state === 'critical').length,
@@ -93,12 +107,20 @@ export default function Documents({ actor }) {
       {error && <div className="err">{error}</div>}
       {msg && <div className="busy">{msg}</div>}
 
-      <div className="stats">
-        <Stat n={counts.expired} l="Expired" c={counts.expired ? 'hot' : ''} />
-        <Stat n={counts.critical} l="Within 30 days" c="warm" />
-        <Stat n={counts.soon} l="Within 90 days" />
-        <Stat n={gaps.length} l="Missing details" c={gaps.length ? 'warm' : ''} />
-        <Stat n={counts.inactive} l="Inactive, not tracked" />
+      <div className="cards">
+        <Card n={counts.expired} l="Expired" note="Already lapsed" tone="red"
+          on={view === 'expiry' && state === 'expired'}
+          onClick={() => { setView('expiry'); setState('expired'); }} />
+        <Card n={counts.critical} l="Within 30 days" note="Chase these first" tone="red"
+          on={view === 'expiry' && state === 'critical'}
+          onClick={() => { setView('expiry'); setState('critical'); }} />
+        <Card n={counts.soon} l="Within 90 days" note="Worth a heads up" tone="amber"
+          on={view === 'expiry' && state === 'soon'}
+          onClick={() => { setView('expiry'); setState('soon'); }} />
+        <Card n={gaps.length} l="Missing" note="No date on record" tone="amber"
+          on={view === 'gaps'} onClick={() => setView('gaps')} />
+        <Card n={insGap} l="No insurance" note="UAE employees" tone="red"
+          on={view === 'insurance'} onClick={() => setView('insurance')} />
       </div>
 
       <div className="toolbar">
@@ -184,10 +206,22 @@ export default function Documents({ actor }) {
             </div>
       ) : (
         <>
+          <div className="docchips">
+            {DOCS.map(([v, l]) => {
+              const n = v === 'all'
+                ? rows.filter(r => r.state !== 'fine' && r.state !== 'inactive').length
+                : rows.filter(r => r.document === v && r.state !== 'fine'
+                    && r.state !== 'inactive').length;
+              return (
+                <button key={v} className="docchip" data-on={doc === v ? '1' : '0'}
+                  onClick={() => setDoc(v)}>
+                  {l}<span className="dn">{n}</span>
+                </button>
+              );
+            })}
+          </div>
+
           <div className="facets">
-            <select className="facetsel" value={doc} onChange={e => setDoc(e.target.value)}>
-              {DOCS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
             <select className="facetsel" value={state} onChange={e => setState(e.target.value)}>
               <option value="all">Expired and expiring</option>
               <option value="expired">Expired only</option>
@@ -238,10 +272,8 @@ export default function Documents({ actor }) {
                       </span>
                       <span className="docname">{r.label}</span>
                       <span className="docdate">
-                        {pretty(r.expires)}
-                        <span className={'chip ' + st.cls}>
-                          {r.days_left < 0 ? `${-r.days_left}d ago` : `${r.days_left}d`}
-                        </span>
+                        <b>{pretty(r.expires)}</b>
+                        <span className={'chip ' + st.cls}>{ago(r.days_left)}</span>
                       </span>
                       <button className="mini go" onClick={() => setRenewing(r)}>Renewed</button>
                     </div>
@@ -262,8 +294,16 @@ export default function Documents({ actor }) {
 }
 
 /* ------------------------------------------------------------ pieces */
-const Stat = ({ n, l, c }) => (
-  <div className={'stat' + (c ? ' ' + c : '')}><b>{n}</b><span>{l}</span></div>
+/** A counter you can press. The number is the filter — seeing 162 expired
+ *  and not being able to click it was the thing that made this page feel
+ *  like a report rather than a tool. */
+const Card = ({ n, l, note, tone, on, onClick }) => (
+  <button className={'card ' + tone + (on ? ' on' : '') + (n ? '' : ' empty')}
+    onClick={onClick} disabled={!n}>
+    <b>{n}</b>
+    <span className="cl">{l}</span>
+    <span className="cn">{note}</span>
+  </button>
 );
 
 function ChaseDialog({ count, doc, onCancel, onSend }) {
