@@ -11,8 +11,6 @@ export const homeCss = `
 .tile{transition:transform .15s var(--ease), border-color .18s var(--ease)}
 .tile:hover{transform:translateY(-3px)}
 .tile:hover .ico{transform:scale(1.08)}
-.lane{transition:border-color .18s var(--ease)}
-.lane:hover{border-color:var(--ink3)}
 
 /* a hero band that breaks out to the full width of the browser, not just
  * .wrap's own constrained column. The technique: give it the viewport's
@@ -35,45 +33,60 @@ export const homeCss = `
   line-height:1.08;margin:0}
 .hero-name{color:var(--accent)}
 .hero-sub{font-size:15px;color:var(--ink2);margin-top:12px;max-width:520px;line-height:1.6}
-
-/* the backlog count is not a dated event, so it does not sit on the
- * timeline -- its own small pill instead, distinct from the rail below */
 .hero-badge{display:inline-flex;align-items:center;gap:6px;margin-top:16px;
   font:500 12.5px var(--font);color:var(--rose);background:var(--rose-soft);
   padding:6px 14px;border-radius:999px;text-decoration:none;
   transition:transform .12s var(--ease)}
 .hero-badge:hover{transform:translateY(-1px)}
 
-/* the rail -- one card per lane, anchored to a line, each carrying a real
- * icon, a real relative-day label, and who or what it concerns */
-.rail{margin-top:30px;position:relative}
-.rail-track{position:absolute;top:15px;left:0;right:0;height:2px;background:var(--line)}
-.rail-items{display:flex;gap:16px;flex-wrap:wrap;position:relative}
-.rail-item{flex:1;min-width:210px;display:flex;flex-direction:column;
-  text-decoration:none;transition:transform .15s var(--ease)}
-.rail-item:hover{transform:translateY(-3px)}
-.rail-item.rose{color:var(--rose)}
-.rail-item.olive{color:var(--s4)}
-.rail-item.amber{color:var(--amber)}
-.rail-dot{width:30px;height:30px;border-radius:50%;background:var(--surface);
-  border:2px solid var(--line);display:grid;place-items:center;flex:none;
-  position:relative;z-index:1;transition:border-color .15s var(--ease)}
-.rail-item:hover .rail-dot{border-color:currentColor}
-.rail-tick{width:2px;height:12px;background:var(--line);margin-left:14px}
-.rail-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
-  padding:14px 16px}
-.rail-item.rose .rail-card{border-top:2px solid var(--rose)}
-.rail-item.olive .rail-card{border-top:2px solid var(--s4)}
-.rail-item.amber .rail-card{border-top:2px solid var(--amber)}
-.rail-when{font:600 11.5px var(--font);letter-spacing:.2px}
-.rail-who{display:flex;align-items:center;gap:8px;margin-top:9px}
-.rail-avatar{width:24px;height:24px;border-radius:50%;background:var(--line2);
-  color:var(--ink2);display:grid;place-items:center;font:600 10px var(--font);flex:none}
-.rail-doc-ico{width:24px;height:24px;border-radius:50%;background:var(--line2);
+/* the board -- one card per lane, and only one. The header carries the
+ * icon, the title and a live count; the body carries every item that
+ * lane has, two shown and the rest revealed in place by the toggle at
+ * the bottom, never repeated somewhere else on the page. */
+.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;
+  max-width:1000px;margin:0 auto 34px;padding:0 24px}
+.board-lane{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  border-top:3px solid var(--line);overflow:hidden;transition:border-color .18s var(--ease)}
+.board-lane:hover{border-color:var(--ink3)}
+.board-lane.rose{border-top-color:var(--rose)}
+.board-lane.olive{border-top-color:var(--s4)}
+.board-lane.amber{border-top-color:var(--amber)}
+
+.board-head{display:flex;align-items:center;gap:12px;padding:16px 18px;text-decoration:none;
+  border-bottom:1px solid var(--line2)}
+.board-head:hover{background:var(--sunk)}
+.board-ico{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;flex:none}
+.board-ico svg{display:block}
+.board-lane.rose .board-ico{background:var(--rose-soft);color:var(--rose)}
+.board-lane.olive .board-ico{background:var(--s4-soft);color:var(--s4)}
+.board-lane.amber .board-ico{background:var(--amber-soft);color:var(--amber)}
+.board-title{flex:1;min-width:0;font:600 14.5px var(--font);color:var(--ink);display:grid;gap:2px}
+.board-blurb{font:400 11.5px var(--font);color:var(--ink3);font-weight:400}
+.board-count{font:600 13px var(--font);color:var(--ink3);background:var(--line2);
+  border-radius:999px;min-width:24px;height:24px;padding:0 8px;display:grid;place-items:center;
+  flex:none}
+.board-count.hot{background:var(--rose);color:#fff}
+
+.board-empty{padding:22px 18px;font-size:12.5px;color:var(--ink3);text-align:center}
+.board-list{display:grid}
+.board-item{display:grid;gap:2px;padding:12px 18px;border-bottom:1px solid var(--line2);
+  text-decoration:none;transition:background .12s var(--ease)}
+.board-item:last-child{border-bottom:0}
+.board-item:hover{background:var(--sunk)}
+.board-when{font:600 11px var(--font);color:var(--ink3)}
+.board-item.urgent .board-when{color:var(--rose)}
+.board-who{display:flex;align-items:center;gap:8px;margin-top:2px}
+.board-avatar{width:22px;height:22px;border-radius:50%;background:var(--line2);
+  color:var(--ink2);display:grid;place-items:center;font:600 9.5px var(--font);flex:none}
+.board-doc-ico{width:22px;height:22px;border-radius:50%;background:var(--line2);
   color:var(--ink2);display:grid;place-items:center;flex:none}
-.rail-name{font:600 13.5px var(--font);color:var(--ink)}
-.rail-why{font:400 12px var(--font);color:var(--ink2);margin-top:7px;line-height:1.5}
-.rail-more{display:block;font:500 11.5px var(--font);margin-top:8px}
+.board-name{font:600 14px var(--font);color:var(--ink)}
+.board-why{font:400 12px var(--font);color:var(--ink3);margin-left:30px}
+
+.board-toggle{display:block;width:100%;text-align:left;padding:11px 18px;
+  font:500 12.5px var(--font);color:var(--ink2);background:var(--sunk);border:0;
+  border-top:1px solid var(--line2);cursor:pointer;transition:color .12s var(--ease)}
+.board-toggle:hover{color:var(--ink)}
 
 /* a small heading gives the tile grid its own second act, rather than
  * letting the hero trail straight into a wall of cards */
@@ -84,12 +97,6 @@ export const homeCss = `
 @media(max-width:640px){
   .hero{padding:34px 0 30px}
   .hero-title{font-size:30px}
-  .rail-items{flex-direction:column}
-  .rail-track{display:none}
+  .board{grid-template-columns:1fr}
 }
-
-/* small inline icons standing in for the plain arrow characters the
- * lanes used before -- same stroke language as every other icon in the
- * app */
-.laneicon svg{display:block}
 `;
