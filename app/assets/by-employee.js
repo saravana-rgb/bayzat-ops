@@ -1,6 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { STATUS_LABEL, statusClass, pretty, describe, handle } from './shared';
+import { STATUS_LABEL, statusClass, pretty, describe, handle,
+         CategoryIcon, categoryTone, nameInitials } from './shared';
 
 /* Not a fetch — v_assets already carries the open assignment on every row,
  * so grouping by holder is a reshape of what the register already loaded.
@@ -43,6 +44,9 @@ export default function ByEmployee({ assets }) {
         <div key={g.key} className="panelbox" style={{ marginBottom: 10 }}>
           <div className="grp-head">
             <div>
+              <span className="avatar" style={{ width: 26, height: 26, fontSize: 11 }}>
+                {nameInitials(g.name)}
+              </span>
               <span className="grp-name">{g.name}</span>
               {g.email && <span className="grp-email">{g.email}</span>}
             </div>
@@ -51,6 +55,10 @@ export default function ByEmployee({ assets }) {
           <div className="grp-list">
             {g.items.map(a => (
               <div key={a.id} className={'grp-item ' + statusClass(a.status)}>
+                <span className={'tone-' + categoryTone(a.category)}
+                  style={{ display: 'inline-flex', padding: 4, borderRadius: 6 }}>
+                  <CategoryIcon slug={a.category} size={14} />
+                </span>
                 <span className="a-ref">{handle(a)}</span>
                 <span style={{ flex: 1, fontSize: 13 }}>{describe(a)}</span>
                 <span className="note-txt">since {pretty(a.assigned_on)}</span>
