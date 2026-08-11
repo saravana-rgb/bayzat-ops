@@ -1,16 +1,12 @@
 'use client';
 /* The tile registry, and who may see what. Adding a tile means a folder under
    app/ plus one entry here — nothing else in the shell changes. */
-
 /* ---------------------------------------------------------- access */
 // Only these people see the Sources tile. Everyone else gets the tracker.
 export const ADMINS = ['saravana@bayzat.com'];
-
 /* ---------------------------------------------------------- access */
 // Only these people see the Sources tile. Everyone else gets the tracker.
 export const isAdmin = (email) => ADMINS.includes((email || '').toLowerCase());
-
-
 /* ------------------------------------------------------------ icons */
 /* Drawn inline so nothing depends on a font shipping the right glyph. */
 const PATHS = {
@@ -18,9 +14,9 @@ const PATHS = {
   reports:    'M18 20V10 M12 20V4 M6 20v-6',
   sources:    'M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z M4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7 M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
   documents:  'M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z M14 3v5h5 M9 13h6 M9 17h4',
+  assets:     'M4 16V8l8-4 8 4v8l-8 4-8-4z M4 8l8 4 8-4 M12 12v8',
   plus:       'M12 5v14 M5 12h14'
 };
-
 /* ----------------------------------------------------------- tiles */
 // Adding a tile later means one entry here and one folder under app/.
 export const tiles = [
@@ -76,11 +72,11 @@ export const tiles = [
     adminOnly: true
   },
   {
-    slug: 'next',
-    name: 'Asset register',
+    slug: 'assets',
+    name: 'Assets',
     blurb: 'Every device, who has it, and what came back — built from what onboarding and offboarding already know.',
-    href: '#',
-    icon: 'plus',
-    live: false
+    href: '/assets',
+    icon: 'assets',
+    live: true
   }
 ];
