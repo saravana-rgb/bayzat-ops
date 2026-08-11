@@ -71,4 +71,64 @@ export const assetsCss = `
 
 /* small heading inside a .panelbox card, used by the reports view */
 .bt{font:600 12.5px var(--font);color:var(--ink);margin:0 0 12px}
+
+/* -------------------------------------------------------- colour tones
+ * One name per hue already in the palette. Reused for category icons,
+ * report bars, and the donut, so the same category reads as the same
+ * colour everywhere in the tile -- no gradients anywhere, flat soft
+ * background plus solid ink, the same technique every chip in this app
+ * already uses. */
+.tone-a1{background:var(--s1-soft);color:var(--s1)}
+.tone-a2{background:var(--accent-soft);color:var(--accent)}
+.tone-a3{background:var(--s3-soft);color:var(--s3)}
+.tone-a4{background:var(--s4-soft);color:var(--s4)}
+.tone-a5{background:var(--s5-soft);color:var(--s5)}
+.tone-a6{background:var(--s6-soft);color:var(--s6)}
+.tone-muted{background:var(--line2);color:var(--ink3)}
+
+/* the category badge itself -- a coloured icon tile, not a flat letter */
+.a-ico{width:34px;height:34px;border-radius:var(--r);display:grid;place-items:center;
+  flex:none;transition:transform .12s var(--ease)}
+.assetrow:hover .a-ico{transform:scale(1.06)}
+
+/* a small round avatar for whoever is holding something -- the same idea
+ * as the Employees tile's own .ini circle, redrawn locally since a tile's
+ * styles only load on its own route */
+.avatar{width:22px;height:22px;border-radius:50%;background:var(--accent-soft);
+  color:var(--accent);display:inline-grid;place-items:center;font:600 10px var(--font);
+  flex:none;vertical-align:middle;margin-right:6px}
+
+/* rows and cards lift very slightly on hover -- a hint of depth without a
+ * shadow that reads as heavy */
+.assetrow{transition:background .12s var(--ease), box-shadow .12s var(--ease)}
+.assetrow:hover{box-shadow:inset 3px 0 0 0 transparent}
+
+/* stat cards become press targets where a real filter exists behind the
+ * number -- flagged with a pointer and a lift, so it reads as clickable
+ * rather than decorative */
+.stat.tappable{cursor:pointer;transition:transform .12s var(--ease), border-color .12s var(--ease)}
+.stat.tappable:hover{transform:translateY(-2px);border-color:var(--ink3)}
+.stat-ico{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  margin-bottom:8px}
+
+/* each action's panel header carries a thin coloured rule on the left,
+ * so Add, Assign, Edit and Return read as distinct moods at a glance
+ * rather than four identical white boxes */
+.ph.mood{border-left:3px solid var(--line);padding-left:14px;margin-left:-14px}
+.ph.mood-add{border-left-color:var(--s4)}
+.ph.mood-assign{border-left-color:var(--s1)}
+.ph.mood-edit{border-left-color:var(--s3)}
+.ph.mood-return{border-left-color:var(--accent)}
+.ph.mood-history{border-left-color:var(--ink3)}
+
+/* the empty state gets a soft icon instead of sitting on text alone */
+.empty-ico{width:44px;height:44px;border-radius:50%;background:var(--sunk);
+  color:var(--ink3);display:grid;place-items:center;margin:0 auto 14px}
+
+/* ------------------------------------------------------------- donut */
+.donut-wrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.donut-legend{display:grid;gap:9px;flex:1;min-width:140px}
+.donut-row{display:flex;align-items:center;gap:9px;font:400 13px var(--font);color:var(--ink2)}
+.donut-dot{width:10px;height:10px;border-radius:50%;flex:none}
+.donut-n{margin-left:auto;font:600 13px var(--font);color:var(--ink)}
 `;
