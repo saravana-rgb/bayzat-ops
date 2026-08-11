@@ -98,3 +98,83 @@ export const fullName = (e) =>
 
 export const initials = (e) =>
   (((e.first_name || '?')[0] || '') + ((e.last_name || '')[0] || '')).toUpperCase();
+
+/* --------------------------------------------------------- iconography
+ * Same technique as Icon() in common/shared.js -- a path string split on
+ * ' M' into separate <path> elements, so the stroke language matches the
+ * rest of the app. Kept deliberately simple (rectangles and straight
+ * lines) rather than freehand curves. */
+export const CATEGORY_ICON = {
+  laptop:      'M4 4h16v10H4z M2 18h20l-2-4H4z',
+  desktop:     'M7 3h10v17H7z M9 7h6 M9 10h6 M11 20h2',
+  monitor:     'M3 4h18v12H3z M9 20h6 M12 16v4',
+  phone:       'M8 2h8v20H8z M11 19h2',
+  sim:         'M5 4h14v16H5z M8 9h8 M8 13h8 M8 17h5',
+  tablet:      'M4 3h16v18H4z M10 20h4',
+  peripheral:  'M2 8h20v10H2z M5 11h2 M9 11h2 M13 11h2 M17 11h2 M5 15h14',
+  access_card: 'M3 5h18v14H3z M6 8h4v4H6z M13 9h6 M13 13h6',
+  other:       'M4 4h16v16H4z M9 9h6v6H9z'
+};
+
+export function CategoryIcon({ slug, size = 18 }) {
+  const d = CATEGORY_ICON[slug] || CATEGORY_ICON.other;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {d.split(' M').map((seg, i) => <path key={i} d={(i ? 'M' : '') + seg} />)}
+    </svg>
+  );
+}
+
+/* Every category gets a distinct, named palette colour -- no new hex,
+ * every one of these already exists as a CSS variable everywhere else in
+ * the app. Cycled across nine categories with six hues, same way the
+ * onboarding step colours (s1..s6) already get reused across more than
+ * six things elsewhere in this codebase. */
+const CATEGORY_TONE = {
+  laptop: 'a1', desktop: 'a6', monitor: 'a4', phone: 'a5',
+  sim: 'a3', tablet: 'a2', peripheral: 'a1', access_card: 'a6', other: 'muted'
+};
+export function categoryTone(slug) { return CATEGORY_TONE[slug] || 'muted'; }
+
+export const TONE_VAR = {
+  a1: 'var(--s1)', a2: 'var(--accent)', a3: 'var(--s3)',
+  a4: 'var(--s4)', a5: 'var(--s5)', a6: 'var(--s6)', muted: 'var(--ink3)'
+};
+
+/* Initials for a plain "First Last" string, not an employee record shape
+ * -- this tile only ever has the holder's name as text, not the record. */
+export function nameInitials(name) {
+  const parts = String(name || '').trim().split(/\s+/);
+  return (((parts[0] || '?')[0] || '') + ((parts[1] || '')[0] || '')).toUpperCase();
+}
+
+/* A small hand-built donut, not a charting library -- this app has none
+ * installed. Pure circle geometry (stroke-dasharray as a fraction of the
+ * circumference), not freehand drawing, so it is correct by construction
+ * rather than by eye. */
+export function Donut({ segments, size = 128, thickness = 18 }) {
+  const total = segments.reduce((s, x) => s + x.value, 0) || 1;
+  const r = (size - thickness) / 2;
+  const c = 2 * Math.PI * r;
+  let offset = 0;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none"
+        stroke="var(--line2)" strokeWidth={thickness} />
+      {segments.filter(s => s.value > 0).map((s, i) => {
+        const frac = s.value / total;
+        const dash = frac * c;
+        const el = (
+          <circle key={i} cx={size / 2} cy={size / 2} r={r} fill="none"
+            stroke={s.color} strokeWidth={thickness}
+            strokeDasharray={`${dash} ${c - dash}`}
+            strokeDashoffset={-offset}
+            transform={`rotate(-90 ${size / 2} ${size / 2})`} />
+        );
+        offset += dash;
+        return el;
+      })}
+    </svg>
+  );
+}
