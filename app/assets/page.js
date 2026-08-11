@@ -4,6 +4,8 @@ import { AuthGate, Bar, supabase, OWNERSHIP, OWNERSHIP_LABEL, STATUS_LABEL,
          CLOSURES, statusClass, today, pretty, describe, handle, fullName,
          usePanelKeys, CategoryIcon, categoryTone, nameInitials }
   from './shared';
+
+const PER_PAGE = 40;
 import ByEmployee from './by-employee';
 import Reports from './reports';
 
@@ -71,6 +73,7 @@ function Register({ assets, cats, me, onReload }) {
   const [tab, setTab] = useState('all');
   const [own, setOwn] = useState('');
   const [q, setQ] = useState('');
+  const [page, setPage] = useState(0);
   const [flash, setFlash] = useState('');
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -81,6 +84,8 @@ function Register({ assets, cats, me, onReload }) {
   const [deleting, setDeleting] = useState(null);
   const [settingStatus, setSettingStatus] = useState(null);
   const [history, setHistory] = useState(null);
+
+  useEffect(() => { setPage(0); }, [tab, own, q]);
 
   function flashIt(msg) {
     setFlash(msg);
@@ -184,20 +189,25 @@ function Register({ assets, cats, me, onReload }) {
             : 'Add the first one above.'}</span>
         </div>
       ) : (
-        <div className="assets">
-          {shown.map(a => (
-            <Row key={a.id} a={a} inTrash={tab === 'trash'}
-              onEdit={() => setEditing(a)}
-              onAssign={() => setAssigning(a)}
-              onReturn={() => setReturning(a)}
-              onReplace={() => setReplacing(a)}
-              onSend={() => setSending(a)}
-              onDelete={() => setDeleting(a)}
-              onSetStatus={() => setSettingStatus(a)}
-              onRestore={() => restore(a)}
-              onHistory={() => setHistory(a)} />
-          ))}
-        </div>
+        <>
+          <div className="assets">
+            {shown.slice(page * PER_PAGE, page * PER_PAGE + PER_PAGE).map(a => (
+              <Row key={a.id} a={a} inTrash={tab === 'trash'}
+                onEdit={() => setEditing(a)}
+                onAssign={() => setAssigning(a)}
+                onReturn={() => setReturning(a)}
+                onReplace={() => setReplacing(a)}
+                onSend={() => setSending(a)}
+                onDelete={() => setDeleting(a)}
+                onSetStatus={() => setSettingStatus(a)}
+                onRestore={() => restore(a)}
+                onHistory={() => setHistory(a)} />
+            ))}
+          </div>
+          {shown.length > PER_PAGE && (
+            <Pager page={page} perPage={PER_PAGE} total={shown.length} onPage={setPage} />
+          )}
+        </>
       )}
 
       {adding && <Add cats={cats} me={me}
@@ -244,6 +254,38 @@ const STAT_ICON_PATH = {
   missing:   'M18 6L6 18 M6 6l12 12'
 };
 const STAT_TONE = { inventory: 'a2', in_use: 'a1', warranty: 'a5', missing: 'a2' };
+
+function Pager({ page, perPage, total, onPage }) {
+  const pages = Math.ceil(total / perPage);
+  const from = page * perPage + 1;
+  const to = Math.min((page + 1) * perPage, total);
+  const start = Math.max(0, Math.min(page - 2, pages - 5));
+  const pageWindow = Array.from({ length: Math.min(5, pages) }, (_, i) => start + i);
+
+  return (
+    <div className="pager">
+      <span className="pinfo">{from}–{to} of {total}</span>
+      <div className="pbtns">
+        <button className="mini" disabled={page === 0} onClick={() => onPage(page - 1)}>
+          Previous
+        </button>
+        {start > 0 && <button className="mini" onClick={() => onPage(0)}>1</button>}
+        {start > 1 && <span className="pdots">…</span>}
+        {pageWindow.map(i => (
+          <button key={i} className="mini" data-on={i === page ? '1' : '0'}
+            onClick={() => onPage(i)}>{i + 1}</button>
+        ))}
+        {start + 5 < pages - 1 && <span className="pdots">…</span>}
+        {start + 5 < pages && (
+          <button className="mini" onClick={() => onPage(pages - 1)}>{pages}</button>
+        )}
+        <button className="mini" disabled={page >= pages - 1} onClick={() => onPage(page + 1)}>
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const Stat = ({ n, l, c, icon, onClick }) => (
   <div className={'stat' + (c ? ' ' + c : '') + (onClick ? ' tappable' : '')}
@@ -302,27 +344,30 @@ function Row({ a, inTrash, onEdit, onAssign, onReturn, onReplace, onSend,
       </span>
       <span className="a-acts">
         {inTrash ? (
-          <span className="mini" onClick={e => { e.stopPropagation(); onRestore(); }}>Restore</span>
+          <span className="mini act-restore" onClick={e => { e.stopPropagation(); onRestore(); }}>Restore</span>
         ) : (
           <>
-            <span className="mini" onClick={e => { e.stopPropagation(); onEdit(); }}>Edit</span>
-            {open ? (
+            <span className="mini act-edit" onClick={e => { e.stopPropagation(); onEdit(); }}>Edit</span>
+            {open && (
               <>
-                <span className="mini" onClick={e => { e.stopPropagation(); onReturn(); }}>
+                <span className="mini act-return" onClick={e => { e.stopPropagation(); onReturn(); }}>
                   {a.ownership === 'personal' ? 'Remove access' : 'Return'}
                 </span>
                 {a.ownership !== 'personal' &&
-                  <span className="mini" onClick={e => { e.stopPropagation(); onReplace(); }}>Replace</span>}
-                <span className="mini" onClick={e => { e.stopPropagation(); onSend(); }}>Email</span>
-              </>
-            ) : (
-              <>
-                {!gone && <span className="mini" onClick={e => { e.stopPropagation(); onAssign(); }}>Assign</span>}
-                {a.ownership !== 'personal' &&
-                  <span className="mini" onClick={e => { e.stopPropagation(); onSetStatus(); }}>Status</span>}
-                <span className="mini" onClick={e => { e.stopPropagation(); onDelete(); }}>Delete</span>
+                  <span className="mini act-replace" onClick={e => { e.stopPropagation(); onReplace(); }}>Replace</span>}
+                <span className="mini act-email" onClick={e => { e.stopPropagation(); onSend(); }}>Email</span>
               </>
             )}
+            {!open && !gone &&
+              <span className="mini act-assign" onClick={e => { e.stopPropagation(); onAssign(); }}>Assign</span>}
+            {/* Status works whether or not it is currently assigned -- a
+             * device can need repair while someone still has it, and there
+             * was previously no way to flag that without returning it
+             * first, which is not what "it needs repair" actually means. */}
+            {a.ownership !== 'personal' &&
+              <span className="mini act-status" onClick={e => { e.stopPropagation(); onSetStatus(); }}>Status</span>}
+            {!open &&
+              <span className="mini act-delete" onClick={e => { e.stopPropagation(); onDelete(); }}>Delete</span>}
           </>
         )}
       </span>
@@ -1148,11 +1193,14 @@ function DeleteAsset({ asset, me, onClose, onSaved }) {
  * it -- this is for the plain cases: something sitting in stock needs
  * repair, or turns out to be missing, with nobody to return it from. */
 function SetStatus({ asset, me, onClose, onSaved }) {
-  const options = asset.ownership === 'leasing'
-    ? [['in_stock', 'In stock'], ['repair', 'Repair'], ['missing', 'Missing'],
-       ['returned_to_lessor', 'Returned to lessor']]
-    : [['in_stock', 'In stock'], ['repair', 'Repair'], ['missing', 'Missing'],
-       ['retired', 'Retired']];
+  const held = !!asset.assignment_id;
+  const options = held
+    ? [['repair', 'Repair'], ['missing', 'Missing']]
+    : asset.ownership === 'leasing'
+      ? [['in_stock', 'In stock'], ['repair', 'Repair'], ['missing', 'Missing'],
+         ['returned_to_lessor', 'Returned to lessor']]
+      : [['in_stock', 'In stock'], ['repair', 'Repair'], ['missing', 'Missing'],
+         ['retired', 'Retired']];
   const [status, setStatusVal] = useState(
     options.some(([v]) => v === asset.status) ? asset.status : options[0][0]);
   const [busy, setBusy] = useState(false);
@@ -1181,6 +1229,13 @@ function SetStatus({ asset, me, onClose, onSaved }) {
         </div>
 
         {err && <div className="err" style={{ marginTop: 16 }}>{err}</div>}
+
+        {held && (
+          <div className="headline" style={{ margin: '16px 0 0' }}>
+            <p>{asset.holder || asset.holder_email} still holds this — changing the status
+              here does not return it or touch who has it.</p>
+          </div>
+        )}
 
         <div className="frow" style={{ marginTop: 18 }}>
           <div style={{ flex: '1 1 100%' }}>
