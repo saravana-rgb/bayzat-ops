@@ -111,15 +111,18 @@ export const assetsCss = `
 .stat-ico{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
   margin-bottom:8px}
 
-/* each action's panel header carries a thin coloured rule on the left,
- * so Add, Assign, Edit and Return read as distinct moods at a glance
- * rather than four identical white boxes */
-.ph.mood{border-left:3px solid var(--line);padding-left:14px;margin-left:-14px}
-.ph.mood-add{border-left-color:var(--s4)}
-.ph.mood-assign{border-left-color:var(--s1)}
-.ph.mood-edit{border-left-color:var(--s3)}
-.ph.mood-return{border-left-color:var(--accent)}
-.ph.mood-history{border-left-color:var(--ink3)}
+/* each panel gets a thin coloured stripe down its own outer edge, so Add,
+ * Assign, Edit and Return read as distinct moods at a glance. This lives
+ * on the panel's own border, never on anything inside it -- an earlier
+ * version put this on the header only, using a negative margin to pull
+ * the bar flush, and that nudged the header text a few pixels out of line
+ * with the labels below it. A colour on the outer box can never do that,
+ * because it never touches the padding or position of anything inside. */
+.panel.mood-add{border-left:3px solid var(--s4)}
+.panel.mood-assign{border-left:3px solid var(--s1)}
+.panel.mood-edit{border-left:3px solid var(--s3)}
+.panel.mood-return{border-left:3px solid var(--accent)}
+.panel.mood-history{border-left:3px solid var(--ink3)}
 
 /* the empty state gets a soft icon instead of sitting on text alone */
 .empty-ico{width:44px;height:44px;border-radius:50%;background:var(--sunk);
