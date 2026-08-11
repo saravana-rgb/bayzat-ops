@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AuthGate, Bar, supabase, OWNERSHIP, OWNERSHIP_LABEL, STATUS_LABEL,
          CLOSURES, statusClass, today, pretty, describe, handle, fullName,
-         usePanelKeys }
+         usePanelKeys, CategoryIcon, categoryTone, nameInitials }
   from './shared';
 import ByEmployee from './by-employee';
 import Reports from './reports';
@@ -120,10 +120,12 @@ function Register({ assets, cats, me, onReload }) {
     <>
       {flash && <div className="busy">{flash}</div>}
       <div className="stats">
-        <Stat n={live.length} l="Live assets" />
-        <Stat n={inUse.length} l="In use" c="calm" />
-        <Stat n={warranty.length} l="Warranty ending" c={warranty.length ? 'warm' : ''} />
-        <Stat n={missing.length} l="Missing" c={missing.length ? 'hot' : ''} />
+        <Stat n={live.length} l="Live assets" icon="a2" />
+        <Stat n={inUse.length} l="In use" c="calm" icon="a1"
+          onClick={() => setTab('assigned')} />
+        <Stat n={warranty.length} l="Warranty ending" c={warranty.length ? 'warm' : ''} icon="a5" />
+        <Stat n={missing.length} l="Missing" c={missing.length ? 'hot' : ''} icon="a2"
+          onClick={() => setTab('missing')} />
       </div>
 
       <div className="toolbar">
@@ -148,6 +150,12 @@ function Register({ assets, cats, me, onReload }) {
 
       {shown.length === 0 ? (
         <div className="empty">
+          <div className="empty-ico">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 4h16v16H4z" /><path d="M9 9h6v6H9z" />
+            </svg>
+          </div>
           <b>{assets.length ? 'Nothing matches' : 'Nothing in the register yet'}</b>
           <span>{assets.length ? 'Try a different search or filter.' : 'Add the first one above.'}</span>
         </div>
@@ -184,8 +192,15 @@ function Register({ assets, cats, me, onReload }) {
   );
 }
 
-const Stat = ({ n, l, c }) => (
-  <div className={'stat' + (c ? ' ' + c : '')}><b>{n}</b><span>{l}</span></div>
+const Stat = ({ n, l, c, icon, onClick }) => (
+  <div className={'stat' + (c ? ' ' + c : '') + (onClick ? ' tappable' : '')}
+    onClick={onClick} role={onClick ? 'button' : undefined}>
+    {icon && <div className={'stat-ico tone-' + icon}>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="6" /></svg>
+    </div>}
+    <b>{n}</b><span>{l}</span>
+  </div>
 );
 
 function Row({ a, onEdit, onAssign, onReturn, onHistory }) {
@@ -200,7 +215,9 @@ function Row({ a, onEdit, onAssign, onReturn, onHistory }) {
 
   return (
     <button className={'assetrow ' + statusClass(a.status)} onClick={onHistory}>
-      <span className="a-ico">{(a.category_label || '?').slice(0, 2).toUpperCase()}</span>
+      <span className={'a-ico tone-' + categoryTone(a.category)}>
+        <CategoryIcon slug={a.category} />
+      </span>
       <span className="a-who">
         <span className="nm">
           <span className="a-ref">{handle(a)}</span>
@@ -212,7 +229,8 @@ function Row({ a, onEdit, onAssign, onReturn, onHistory }) {
           {a.category_label}
           {a.serial ? ' · ' + a.serial : ''}
           {a.location ? ' · ' + a.location : ''}
-          {open ? <> · {a.holder || a.holder_email} since {pretty(a.assigned_on)}</> : ''}
+          {open ? <> · <span className="avatar">{nameInitials(a.holder)}</span>
+                      {a.holder || a.holder_email} since {pretty(a.assigned_on)}</> : ''}
           {clock ? <> · {clock}</> : ''}
         </span>
       </span>
@@ -264,7 +282,7 @@ function Add({ cats, me, onClose, onSaved }) {
   return (
     <div className="veil" onClick={onClose}>
       <div className="panel" onClick={e => e.stopPropagation()}>
-        <div className="ph">
+        <div className="ph mood mood-add">
           <div>
             <h2 style={{ fontSize: 17, fontWeight: 600 }}>Add an asset</h2>
             <p className="note-txt" style={{ marginTop: 5 }}>
@@ -396,7 +414,7 @@ function EditAsset({ asset, cats, me, onClose, onSaved }) {
   return (
     <div className="veil" onClick={onClose}>
       <div className="panel" onClick={e => e.stopPropagation()}>
-        <div className="ph">
+        <div className="ph mood mood-edit">
           <div>
             <h2 style={{ fontSize: 17, fontWeight: 600 }}>Edit {handle(asset)}</h2>
             <p className="note-txt" style={{ marginTop: 5 }}>
@@ -530,7 +548,7 @@ function Assign({ asset, me, onClose, onSaved }) {
   return (
     <div className="veil" onClick={onClose}>
       <div className="panel" onClick={e => e.stopPropagation()}>
-        <div className="ph">
+        <div className="ph mood mood-assign">
           <div>
             <h2 style={{ fontSize: 17, fontWeight: 600 }}>Assign {handle(asset)}</h2>
             <p className="note-txt" style={{ marginTop: 5 }}>
@@ -639,7 +657,7 @@ function Return({ asset, me, onClose, onSaved }) {
   return (
     <div className="veil" onClick={onClose}>
       <div className="panel" onClick={e => e.stopPropagation()}>
-        <div className="ph">
+        <div className="ph mood mood-return">
           <div>
             <h2 style={{ fontSize: 17, fontWeight: 600 }}>
               {personal ? 'Remove access from ' + handle(asset) : 'Close out ' + handle(asset)}
@@ -730,7 +748,7 @@ function History({ asset, onClose }) {
   return (
     <div className="veil" onClick={onClose}>
       <div className="panel wide" onClick={e => e.stopPropagation()}>
-        <div className="ph">
+        <div className="ph mood mood-history">
           <div>
             <h2 style={{ fontSize: 17, fontWeight: 600 }}>{handle(asset)}</h2>
             <p className="note-txt" style={{ marginTop: 5 }}>
