@@ -2,6 +2,53 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AuthGate, Bar, Icon, supabase } from './common/shared';
 import { isAdmin, tiles } from './common/tiles';
+import { homeCss } from './styles';
+
+/* Small inline icons standing in for the plain arrow/exclamation
+ * characters the lanes used before. Same drawing technique as Icon() in
+ * common/shared.js -- a stroked path, nothing filled, no new dependency. */
+function LaneIcon({ kind }) {
+  const d = kind === 'leaving' ? 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9'
+          : kind === 'joining' ? 'M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4 M10 17l5-5-5-5 M15 12H3'
+          : 'M12 9v4 M12 17h.01 M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z';
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {d.split(' M').map((seg, i) => <path key={i} d={(i ? 'M' : '') + seg} />)}
+    </svg>
+  );
+}
+
+/* One glance at how today is made up -- built from the exact same three
+ * counts already driving the lanes underneath it. Nothing new fetched or
+ * computed here, only rendered differently. */
+function CompositionStrip({ leaving, joining, expiring }) {
+  const total = leaving + joining + expiring;
+  if (total === 0) return null;
+  const segs = [
+    { n: leaving, color: 'var(--rose)', label: 'Leaving' },
+    { n: joining, color: 'var(--s4)', label: 'Joining' },
+    { n: expiring, color: 'var(--amber)', label: 'Expiring' }
+  ].filter(s => s.n > 0);
+  return (
+    <>
+      <div className="compstrip">
+        {segs.map(s => (
+          <span key={s.label} className="compseg"
+            style={{ flexGrow: s.n, background: s.color }} />
+        ))}
+      </div>
+      <div className="complegend">
+        {segs.map(s => (
+          <span key={s.label} className="compitem">
+            <span className="compdot" style={{ background: s.color }} />
+            {s.n} {s.label.toLowerCase()}
+          </span>
+        ))}
+      </div>
+    </>
+  );
+}
 
 /** One kind of work. Empty lanes still show, so the shape of the day is the
  *  same every morning and a glance tells you which side is busy. */
@@ -142,6 +189,7 @@ function Shell() {
 
   return (
     <div className="wrap">
+      <style dangerouslySetInnerHTML={{ __html: homeCss }} />
       <Bar
         title="Bayzat Ops"
         sub="Internal tools for the IT and People teams"
@@ -158,18 +206,20 @@ function Shell() {
                 ? 'Nothing is waiting on you — every joiner, leaver and licence is up to date.'
                 : `${total} thing${total > 1 ? 's need' : ' needs'} your attention.`}
           </p>
+          {d && <CompositionStrip leaving={leaving.length} joining={joining.length}
+            expiring={expiring.length} />}
         </div>
       </div>
 
       {d && total > 0 && (
         <div className="lanes">
-          <Lane kind="leaving" title="Leaving" icon="←"
+          <Lane kind="leaving" title="Leaving" icon={<LaneIcon kind="leaving" />}
             blurb="Collect the device, close their access"
             items={leaving} href="/offboarding" />
-          <Lane kind="joining" title="Joining" icon="→"
+          <Lane kind="joining" title="Joining" icon={<LaneIcon kind="joining" />}
             blurb="Set them up before they start"
             items={joining} href="/onboarding" />
-          <Lane kind="expiring" title="Expiring" icon="!"
+          <Lane kind="expiring" title="Expiring" icon={<LaneIcon kind="expiring" />}
             blurb="Licences and cards due for renewal"
             items={expiring} href="/documents" />
         </div>
