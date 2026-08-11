@@ -281,8 +281,8 @@ function Add({ cats, me, onClose, onSaved }) {
 
   return (
     <div className="veil" onClick={onClose}>
-      <div className="panel" onClick={e => e.stopPropagation()}>
-        <div className="ph mood mood-add">
+      <div className="panel mood-add" onClick={e => e.stopPropagation()}>
+        <div className="ph">
           <div>
             <h2 style={{ fontSize: 17, fontWeight: 600 }}>Add an asset</h2>
             <p className="note-txt" style={{ marginTop: 5 }}>
@@ -413,8 +413,8 @@ function EditAsset({ asset, cats, me, onClose, onSaved }) {
 
   return (
     <div className="veil" onClick={onClose}>
-      <div className="panel" onClick={e => e.stopPropagation()}>
-        <div className="ph mood mood-edit">
+      <div className="panel mood-edit" onClick={e => e.stopPropagation()}>
+        <div className="ph">
           <div>
             <h2 style={{ fontSize: 17, fontWeight: 600 }}>Edit {handle(asset)}</h2>
             <p className="note-txt" style={{ marginTop: 5 }}>
@@ -547,8 +547,8 @@ function Assign({ asset, me, onClose, onSaved }) {
 
   return (
     <div className="veil" onClick={onClose}>
-      <div className="panel" onClick={e => e.stopPropagation()}>
-        <div className="ph mood mood-assign">
+      <div className="panel mood-assign" onClick={e => e.stopPropagation()}>
+        <div className="ph">
           <div>
             <h2 style={{ fontSize: 17, fontWeight: 600 }}>Assign {handle(asset)}</h2>
             <p className="note-txt" style={{ marginTop: 5 }}>
@@ -656,8 +656,8 @@ function Return({ asset, me, onClose, onSaved }) {
 
   return (
     <div className="veil" onClick={onClose}>
-      <div className="panel" onClick={e => e.stopPropagation()}>
-        <div className="ph mood mood-return">
+      <div className="panel mood-return" onClick={e => e.stopPropagation()}>
+        <div className="ph">
           <div>
             <h2 style={{ fontSize: 17, fontWeight: 600 }}>
               {personal ? 'Remove access from ' + handle(asset) : 'Close out ' + handle(asset)}
@@ -704,8 +704,10 @@ function Return({ asset, me, onClose, onSaved }) {
          * the two read as a single connected decision rather than a
          * checkbox that happens to sit near an unrelated text box */}
         <div style={{ borderTop: '1px solid var(--line2)', marginTop: 18, paddingTop: 16 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: wiped ? 12 : 0 }}>
-            <input type="checkbox" style={{ width: 'auto' }} checked={wiped}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 9,
+            marginBottom: wiped ? 12 : 0, fontSize: 13.5, fontWeight: 400, color: 'var(--ink)' }}>
+            <input type="checkbox" checked={wiped}
+              style={{ width: 16, height: 16, accentColor: 'var(--accent)' }}
               onChange={e => setWiped(e.target.checked)} />
             {personal ? 'Bayzat account wiped from the device' : 'Device wiped'}
           </label>
@@ -747,8 +749,8 @@ function History({ asset, onClose }) {
 
   return (
     <div className="veil" onClick={onClose}>
-      <div className="panel wide" onClick={e => e.stopPropagation()}>
-        <div className="ph mood mood-history">
+      <div className="panel wide mood-history" onClick={e => e.stopPropagation()}>
+        <div className="ph">
           <div>
             <h2 style={{ fontSize: 17, fontWeight: 600 }}>{handle(asset)}</h2>
             <p className="note-txt" style={{ marginTop: 5 }}>
