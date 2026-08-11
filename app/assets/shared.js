@@ -1,9 +1,23 @@
 'use client';
+import { useEffect } from 'react';
 /* What an asset looks like, and the small pieces every part of this tile
    needs. The client, the sign-in gate and the top bar are not redefined
    here — they come from common/shared like every other tile uses. */
 
 export { AuthGate, Bar, supabase } from '../common/shared';
+
+/* Every panel in this tile wants the same two things: Escape closes it, and
+ * the first field is focused the moment it opens. One hook, used four times,
+ * instead of four slightly different copies of the same effect. */
+export function usePanelKeys(onClose, focusRef) {
+  useEffect(() => {
+    focusRef?.current?.focus();
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+}
 
 /* ---------------------------------------------------------- vocabulary
    Matches ASSET_TYPES in employees/shared.js exactly, on purpose — the
