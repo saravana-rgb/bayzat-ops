@@ -1,6 +1,7 @@
 'use client';
 import { useMemo } from 'react';
-import { OWNERSHIP_LABEL, pretty, describe, handle } from './shared';
+import { OWNERSHIP_LABEL, pretty, describe, handle,
+         CategoryIcon, categoryTone, TONE_VAR, Donut } from './shared';
 
 export default function Reports({ assets }) {
   const live = useMemo(() => assets.filter(a =>
@@ -9,8 +10,8 @@ export default function Reports({ assets }) {
   const byCategory = useMemo(() => {
     const m = {};
     live.forEach(a => {
-      const k = a.category_label || a.category;
-      m[k] = m[k] || { label: k, total: 0, free: 0 };
+      const k = a.category;
+      m[k] = m[k] || { slug: a.category, label: a.category_label || a.category, total: 0, free: 0 };
       m[k].total++;
       if (a.status === 'in_stock') m[k].free++;
     });
@@ -24,7 +25,6 @@ export default function Reports({ assets }) {
     return Object.keys(m).map(k => ({ key: k, label: OWNERSHIP_LABEL[k] || k, n: m[k] }))
       .sort((x, y) => y.n - x.n);
   }, [live]);
-  const mostOwn = byOwn[0]?.n || 1;
 
   const expiring = useMemo(() => assets.filter(a =>
     !['retired', 'released', 'returned_to_lessor'].includes(a.status)
@@ -50,9 +50,18 @@ export default function Reports({ assets }) {
         <div className="bt">What we hold</div>
         <p className="note-txt" style={{ marginBottom: 14 }}>In stock against the total, by kind.</p>
         {byCategory.map(c => (
-          <div className="mrow" key={c.label}>
-            <span className="mlbl">{c.label}</span>
-            <span className="mtrack"><span className="mfill p1" style={{ width: (c.total / mostCat * 100) + '%' }} /></span>
+          <div className="mrow" key={c.slug}>
+            <span className="mlbl" style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span className={'tone-' + categoryTone(c.slug)}
+                style={{ display: 'inline-flex', padding: 3, borderRadius: 5 }}>
+                <CategoryIcon slug={c.slug} size={13} />
+              </span>
+              {c.label}
+            </span>
+            <span className="mtrack">
+              <span className="mfill" style={{ width: (c.total / mostCat * 100) + '%',
+                background: TONE_VAR[categoryTone(c.slug)] }} />
+            </span>
             <span className="mval">{c.total}</span>
           </div>
         ))}
@@ -66,13 +75,22 @@ export default function Reports({ assets }) {
         <p className="note-txt" style={{ marginBottom: 14 }}>
           Personal devices never come back — they are released.
         </p>
-        {byOwn.map(o => (
-          <div className="mrow" key={o.key}>
-            <span className="mlbl">{o.label}</span>
-            <span className="mtrack"><span className="mfill p4" style={{ width: (o.n / mostOwn * 100) + '%' }} /></span>
-            <span className="mval">{o.n}</span>
+        <div className="donut-wrap">
+          <Donut segments={byOwn.map(o => ({
+            value: o.n,
+            color: o.key === 'bayzat' ? 'var(--s1)' : o.key === 'leasing' ? 'var(--s3)' : 'var(--s5)'
+          }))} />
+          <div className="donut-legend">
+            {byOwn.map(o => (
+              <div className="donut-row" key={o.key}>
+                <span className="donut-dot" style={{ background:
+                  o.key === 'bayzat' ? 'var(--s1)' : o.key === 'leasing' ? 'var(--s3)' : 'var(--s5)' }} />
+                {o.label}
+                <span className="donut-n">{o.n}</span>
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
 
       <div className="panelbox">
