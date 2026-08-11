@@ -11,6 +11,12 @@ export const ASSET_TYPES = [
 ];
 export const ASSET_LABEL = Object.fromEntries(ASSET_TYPES);
 
+export const LEASING_COMPANIES = [
+  ['ABCOM',           'ABCOM'],
+  ['GRENKE/ZENADMIN', 'GRENKE/ZENADMIN'],
+  ['HOFY',             'HOFY']
+];
+
 export const GROUPS = [
   {
     name: 'Who they are',
@@ -40,6 +46,18 @@ export const GROUPS = [
     fields: [
       { k: 'asset_type',   l: 'Device type', req: true, type: 'select', options: ASSET_TYPES },
       { k: 'asset_serial', l: 'Serial number' },
+      /* Only applies -- and is only required -- when the device is leased.
+       * Deliberately NOT `req: true`: REQUIRED (below) feeds a per-field
+       * completeness report across every active employee, and this field
+       * is legitimately blank for everyone not on a leased device. Marking
+       * it plainly required would make that report say something false --
+       * "97% missing Leasing company" -- about people the field was never
+       * meant to apply to. reqIf/showIf keep it conditional everywhere:
+       * the drawer, the red-flag count, and the completeness report all
+       * agree on when it actually matters. */
+      { k: 'leasing_company', l: 'Leasing company', type: 'select', options: LEASING_COMPANIES,
+        showIf: (e) => e.asset_type === 'leasing',
+        reqIf:  (e) => e.asset_type === 'leasing' },
       { k: 'asset_note',   l: 'Note', wide: true }
     ]
   },
@@ -59,12 +77,18 @@ export const FIELD = Object.fromEntries(ALL_FIELDS.map(f => [f.k, f]));
 export const REQUIRED = ALL_FIELDS.filter(f => f.req).map(f => f.k);
 
 /** Which required fields are still empty. Mirrors the database view, so the
- *  count in the app and the count in a report agree. */
+ *  count in the app and the count in a report agree. A field only counts
+ *  as missing when it actually applies (showIf) and is actually required
+ *  right now (req, or reqIf evaluated against this record) -- so a field
+ *  that does not apply to someone is never held against them. */
 export function missingOf(e) {
-  return REQUIRED.filter(k => {
-    const v = e[k];
+  return ALL_FIELDS.filter(f => {
+    if (f.showIf && !f.showIf(e)) return false;
+    const required = f.req || (f.reqIf && f.reqIf(e));
+    if (!required) return false;
+    const v = e[f.k];
     return v === null || v === undefined || String(v).trim() === '';
-  });
+  }).map(f => f.k);
 }
 
 export const initials = (e) =>
