@@ -19,95 +19,77 @@ function LaneIcon({ kind }) {
   );
 }
 
-function railInitials(name) {
+function nameInitials(name) {
   const parts = String(name || '').trim().split(/\s+/);
   return (((parts[0] || '?')[0] || '') + ((parts[1] || '')[0] || '')).toUpperCase();
 }
 
-/* The rail's one job: for each thing actually happening today, show what
- * kind it is, who or what it concerns, and why it matters -- using only
- * fields the data really has. "when" here is always relative day language
- * ("Starts today", "Expires in 4 days") because hiring_date, last_working_
- * day and expiry_date are all dates, not timestamps -- there is no time of
- * day to show, so the rail never claims one.
- *
- * Deliberately excludes the "records need attention" count: that is an
- * ongoing backlog, not a dated event, and mixing it into a timeline would
- * be mixing two different kinds of information into one visual language.
- * It gets its own small badge instead, see HeroBadge below. */
-function TodayRail({ leaving, joining, expiring }) {
-  const lanes = [
-    { key: 'leaving', tone: 'rose', verb: 'leaving', href: '/offboarding', items: leaving, person: true },
-    { key: 'joining', tone: 'olive', verb: 'joining', href: '/onboarding', items: joining, person: true },
-    { key: 'expiring', tone: 'amber', verb: 'expiring', href: '/documents', items: expiring, person: false }
-  ].filter(l => l.items.length > 0);
-  if (lanes.length === 0) return null;
+/* One place per lane, not two. This replaces what used to be a compact
+ * "rail" summary above a separate, more complete lane list below -- with
+ * only a couple of people in a lane, those two sections showed the same
+ * thing twice, styled two different ways. Now there is exactly one card
+ * per lane, carrying everything: a real icon and count in the header,
+ * every item in the body, and a press-to-expand for anything past the
+ * first two rather than a link elsewhere that repeats the same names. */
+function BoardLane({ tone, kind, title, blurb, href, items, person }) {
+  const [open, setOpen] = useState(false);
+  const urgent = items.filter(i => i.urgent).length;
+  const shown = open ? items : items.slice(0, 2);
+  const rest = items.length - shown.length;
 
   return (
-    <div className="rail">
-      <div className="rail-track" />
-      <div className="rail-items">
-        {lanes.map(lane => {
-          const top = lane.items[0];
-          return (
-            <a key={lane.key} className={'rail-item ' + lane.tone} href={lane.href}>
-              <span className="rail-dot"><LaneIcon kind={lane.key} /></span>
-              <span className="rail-tick" />
-              <span className="rail-card">
-                <span className="rail-when">{top.when}</span>
-                <span className="rail-who">
-                  {lane.person
-                    ? <span className="rail-avatar">{railInitials(top.name)}</span>
-                    : <span className="rail-doc-ico"><Icon name="documents" size={13} /></span>}
-                  <span className="rail-name">{top.name}</span>
-                </span>
-                <span className="rail-why">{top.why}</span>
-                {lane.items.length > 1 &&
-                  <span className="rail-more">+{lane.items.length - 1} more {lane.verb}</span>}
+    <div className={'board-lane ' + tone}>
+      <a className="board-head" href={href}>
+        <span className="board-ico"><LaneIcon kind={kind} /></span>
+        <span className="board-title">
+          {title}
+          <span className="board-blurb">{blurb}</span>
+        </span>
+        <span className={'board-count' + (urgent ? ' hot' : '')}>{items.length}</span>
+      </a>
+
+      {items.length === 0 ? (
+        <p className="board-empty">Nothing outstanding</p>
+      ) : (
+        <div className="board-list">
+          {shown.map((it, i) => (
+            <a key={i} className={'board-item' + (it.urgent ? ' urgent' : '')} href={href}>
+              <span className="board-when">{it.when}</span>
+              <span className="board-who">
+                {person
+                  ? <span className="board-avatar">{nameInitials(it.name)}</span>
+                  : <span className="board-doc-ico"><Icon name="documents" size={13} /></span>}
+                <span className="board-name">{it.name}</span>
               </span>
+              <span className="board-why">{it.why}</span>
             </a>
-          );
-        })}
-      </div>
+          ))}
+          {items.length > 2 && (
+            <button className="board-toggle" onClick={() => setOpen(o => !o)}>
+              {open ? 'Show less' : `+${rest} more`}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OpsBoard({ leaving, joining, expiring }) {
+  return (
+    <div className="board">
+      <BoardLane tone="rose" kind="leaving" title="Leaving" href="/offboarding"
+        blurb="Collect the device, close their access" items={leaving} person />
+      <BoardLane tone="olive" kind="joining" title="Joining" href="/onboarding"
+        blurb="Set them up before they start" items={joining} person />
+      <BoardLane tone="amber" kind="expiring" title="Expiring" href="/documents"
+        blurb="Licences and cards due for renewal" items={expiring} />
     </div>
   );
 }
 
 /** One kind of work. Empty lanes still show, so the shape of the day is the
  *  same every morning and a glance tells you which side is busy. */
-function Lane({ kind, title, icon, blurb, items, href }) {
-  const urgent = items.filter(i => i.urgent).length;
-  return (
-    <div className={'lane ' + kind + (items.length ? '' : ' quiet')}>
-      <a className="lanehead" href={href}>
-        <span className="laneicon">{icon}</span>
-        <span className="lanetitle">
-          {title}
-          <span className="laneblurb">{blurb}</span>
-        </span>
-        <span className={'lanecount' + (urgent ? ' hot' : '')}>{items.length}</span>
-      </a>
-
-      {items.length === 0
-        ? <p className="lanenone">Nothing outstanding</p>
-        : <div className="lanelist">
-            {items.slice(0, 4).map((i, n) => (
-              <a key={n} className={'laneitem' + (i.urgent ? ' urgent' : '')} href={href}>
-                <span className="liname">{i.name}</span>
-                <span className="liwhen">{i.when}</span>
-                <span className="liwhy">{i.why}</span>
-              </a>
-            ))}
-            {items.length > 4 && (
-              <a className="lanemore" href={href}>
-                and {items.length - 4} more →
-              </a>
-            )}
-          </div>}
-    </div>
-  );
-}
-
 export default function Home() {
   return <AuthGate><Shell /></AuthGate>;
 }
@@ -246,23 +228,10 @@ function Shell() {
               {d.gaps.length} record{d.gaps.length > 1 ? 's' : ''} need attention
             </a>
           )}
-          {d && <TodayRail leaving={leaving} joining={joining} expiring={expiring} />}
         </div>
       </div>
 
-      {d && total > 0 && (
-        <div className="lanes">
-          <Lane kind="leaving" title="Leaving" icon={<LaneIcon kind="leaving" />}
-            blurb="Collect the device, close their access"
-            items={leaving} href="/offboarding" />
-          <Lane kind="joining" title="Joining" icon={<LaneIcon kind="joining" />}
-            blurb="Set them up before they start"
-            items={joining} href="/onboarding" />
-          <Lane kind="expiring" title="Expiring" icon={<LaneIcon kind="expiring" />}
-            blurb="Licences and cards due for renewal"
-            items={expiring} href="/documents" />
-        </div>
-      )}
+      {d && <OpsBoard leaving={leaving} joining={joining} expiring={expiring} />}
 
       <div className="section-head">
         <h3>Everything you can do</h3>
