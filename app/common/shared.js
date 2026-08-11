@@ -24,6 +24,7 @@ const PATHS = {
   employees:  'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75',
   offboarding:'M16 17l5-5-5-5 M21 12H9 M12 19H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6',
   master:     'M3 7h18 M3 12h18 M3 17h18 M7 3v18',
+  assets:     'M4 4h16v10H4z M2 18h20l-2-4H4z',
   plus:       'M12 5v14 M5 12h14'
 };
 
