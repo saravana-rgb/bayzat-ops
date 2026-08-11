@@ -385,6 +385,39 @@ const Stat = ({ n, l, c }) => (
  * tables directly -- the same ones the Assets tile itself uses -- so an
  * asset added here is a real, tracked asset, not a duplicate the Assets
  * tile knows nothing about. */
+/** Today, in the browser's own local time. toISOString() is UTC, which
+ *  reads as yesterday for the first four hours of a Dubai day. */
+function today() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+
+/* Which closures exist depends on who owns the thing -- matches the same
+ * vocabulary already proven in the Assets tile. Duplicated rather than
+ * imported across the tile boundary, same reasoning as everywhere else in
+ * this app: each tile owns its own files, so a change to one tile's
+ * internals can never silently break another. */
+const CLOSURES = {
+  bayzat: [
+    ['collected',   'Collected',              true],
+    ['reassigned',  'Passed to someone else', true],
+    ['written_off', 'Written off',            false],
+    ['missing',     'Not returned',           false]
+  ],
+  leasing: [
+    ['collected',          'Collected', true],
+    ['returned_to_lessor', 'Returned to lessor', false],
+    ['missing',            'Not returned', false]
+  ],
+  personal: [
+    ['access_removed', 'Access removed', false],
+    ['missing',        'Unresolved',     false]
+  ]
+};
+
+const assetHandle = a => a.tag || a.serial || (a.id ? a.id.slice(0, 8) : 'this device');
+
 function OtherAssets({ employee, email }) {
   const [items, setItems] = useState(null);
   const [cats, setCats] = useState([]);
@@ -392,6 +425,9 @@ function OtherAssets({ employee, email }) {
   const [f, setF] = useState({ category: 'laptop', ownership: 'bayzat', serial: '', tag: '' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [emailing, setEmailing] = useState(null);
+  const [returning, setReturning] = useState(null);
+  const [replacing, setReplacing] = useState(null);
 
   const load = useCallback(async () => {
     const [asn, cat] = await Promise.all([
@@ -449,6 +485,14 @@ function OtherAssets({ employee, email }) {
                 {it.asset.serial && it.asset.tag ? ' · ' + it.asset.serial : ''}
                 {' · ' + ownLabel(it.asset.ownership)}
               </div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                <button className="mini" onClick={() => setEmailing(it)}>Email</button>
+                <button className="mini" onClick={() => setReturning(it)}>
+                  {it.asset.ownership === 'personal' ? 'Remove access' : 'Return'}
+                </button>
+                {it.asset.ownership !== 'personal' &&
+                  <button className="mini" onClick={() => setReplacing(it)}>Replace</button>}
+              </div>
             </div>
           ))}
         </div>
@@ -491,6 +535,344 @@ function OtherAssets({ employee, email }) {
           </div>
         </div>
       )}
+
+      {emailing && <EmpSendEmail item={emailing} employee={employee} me={email}
+        onClose={() => setEmailing(null)} onSaved={load} />}
+
+      {returning && <EmpReturn item={returning} me={email}
+        onClose={() => setReturning(null)}
+        onSaved={() => { setReturning(null); load(); }} />}
+
+      {replacing && <EmpReplace item={replacing} employee={employee} cats={cats} me={email}
+        onClose={() => setReplacing(null)}
+        onSaved={() => { setReplacing(null); load(); }} />}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------- send email
+ * Same idea as the Assets tile's own version: nothing sends from here.
+ * This generates a one-time link, saves it against the assignment, and
+ * opens a pre-filled draft in Gmail -- the person using this tile sends
+ * it from their own inbox. */
+function EmpSendEmail({ item, employee, me, onClose, onSaved }) {
+  const asset = item.asset;
+  const [row, setRow] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  const load = useCallback(async () => {
+    const { data, error } = await supabase.from('asset_assignments')
+      .select('ack_token, ack_sent_at, ack_sent_by, ack_acknowledged_at')
+      .eq('id', item.id).single();
+    if (error) { setErr(error.message); return; }
+    setRow(data);
+  }, [item.id]);
+  useEffect(() => { load(); }, [load]);
+
+  async function ensureToken() {
+    if (row && row.ack_token) return row.ack_token;
+    setBusy(true); setErr('');
+    const newToken = crypto.randomUUID();
+    const { error } = await supabase.from('asset_assignments').update({
+      ack_token: newToken, ack_sent_at: new Date().toISOString(), ack_sent_by: me
+    }).eq('id', item.id);
+    setBusy(false);
+    if (error) { setErr(error.message); return null; }
+    await load();
+    onSaved();
+    return newToken;
+  }
+
+  function draft(token) {
+    const url = window.location.origin + '/acknowledge/' + token;
+    const firstName = (fullName(employee) || '').split(' ')[0] || 'there';
+    const senderRaw = (me || '').split('@')[0].split('.')[0];
+    const sender = senderRaw ? senderRaw.charAt(0).toUpperCase() + senderRaw.slice(1) : 'Bayzat IT';
+    const deviceLine = [asset.make, asset.model].filter(Boolean).join(' ') || assetHandle(asset);
+    return {
+      subject: 'Your Bayzat equipment — please confirm receipt',
+      body:
+        'Hi ' + firstName + ',\n\n' +
+        "You've been issued the following:\n\n" +
+        '  Device: ' + deviceLine + '\n' +
+        '  Serial: ' + (asset.serial || 'not recorded') + '\n\n' +
+        "Please confirm you've received it by opening the link below:\n\n" +
+        '  ' + url + '\n\n' +
+        'This takes a few seconds and helps us keep accurate records of company equipment.\n\n' +
+        'Thanks,\n' + sender + '\nBayzat IT'
+    };
+  }
+
+  async function openInGmail() {
+    const t = await ensureToken();
+    if (!t) return;
+    const { subject, body } = draft(t);
+    const gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1' +
+      '&to=' + encodeURIComponent(employee.work_email || '') +
+      '&su=' + encodeURIComponent(subject) +
+      '&body=' + encodeURIComponent(body);
+    window.open(gmailUrl, '_blank');
+  }
+
+  async function copyDraft() {
+    const t = await ensureToken();
+    if (!t) return;
+    const { subject, body } = draft(t);
+    navigator.clipboard.writeText('Subject: ' + subject + '\n\n' + body).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    });
+  }
+
+  return (
+    <div className="veil" onClick={onClose}>
+      <div className="panel" onClick={ev => ev.stopPropagation()}>
+        <div className="ph">
+          <div>
+            <h2 style={{ fontSize: 17, fontWeight: 600 }}>Allocation email — {assetHandle(asset)}</h2>
+            <p className="note-txt" style={{ marginTop: 5 }}>{fullName(employee)}</p>
+          </div>
+          <button className="x" onClick={onClose}>✕</button>
+        </div>
+
+        {err && <div className="err" style={{ marginTop: 16 }}>{err}</div>}
+
+        {row && row.ack_acknowledged_at ? (
+          <div className="headline" style={{ margin: '16px 0' }}>
+            <p>Acknowledged on {pretty(row.ack_acknowledged_at.slice(0, 10))}. Nothing further to do.</p>
+          </div>
+        ) : row && row.ack_sent_at ? (
+          <div className="headline" style={{ margin: '16px 0' }}>
+            <p>Sent on {pretty(row.ack_sent_at.slice(0, 10))} by {(row.ack_sent_by || '').split('@')[0]},
+              not yet acknowledged. You can send it again below.</p>
+          </div>
+        ) : (
+          <p className="note-txt" style={{ marginTop: 16 }}>
+            This opens a draft in Gmail — nothing sends from here directly.
+          </p>
+        )}
+
+        {!(row && row.ack_acknowledged_at) && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            <button className="btn" disabled={busy} onClick={openInGmail}>
+              {busy ? 'Preparing…' : 'Open in Gmail'}
+            </button>
+            <button className="btn ghost" disabled={busy} onClick={copyDraft}>
+              {copied ? 'Copied' : 'Copy text instead'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------- return */
+function EmpReturn({ item, me, onClose, onSaved }) {
+  const asset = item.asset;
+  const options = CLOSURES[asset.ownership] || CLOSURES.bayzat;
+  const [closure, setClosure] = useState(options[0][0]);
+  const [when, setWhen] = useState(today());
+  const [condition, setCondition] = useState('');
+  const [wiped, setWiped] = useState(false);
+  const [evidence, setEvidence] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const chosen = options.find(o => o[0] === closure);
+  const needsCondition = chosen ? chosen[2] : false;
+  const personal = asset.ownership === 'personal';
+
+  async function save() {
+    if (needsCondition && !condition.trim()) {
+      setErr('What condition did it come back in? The database refuses without it.');
+      return;
+    }
+    if (wiped && !evidence.trim()) {
+      setErr('A wipe needs evidence behind it — a ticket, a link, or who witnessed it.');
+      return;
+    }
+    setBusy(true); setErr('');
+    const patch = { returned_on: when, returned_by: me, closure, return_condition: condition.trim() || null };
+    if (wiped) { patch.wiped_at = new Date().toISOString(); patch.wipe_evidence = evidence.trim(); }
+    if (personal) patch.access_removed_at = new Date().toISOString();
+    const { error } = await supabase.from('asset_assignments').update(patch).eq('id', item.id);
+    setBusy(false);
+    if (error) { setErr(error.message); return; }
+    onSaved();
+  }
+
+  return (
+    <div className="veil" onClick={onClose}>
+      <div className="panel" onClick={ev => ev.stopPropagation()}>
+        <div className="ph">
+          <div>
+            <h2 style={{ fontSize: 17, fontWeight: 600 }}>
+              {personal ? 'Remove access from ' : 'Close out '}{assetHandle(asset)}
+            </h2>
+          </div>
+          <button className="x" onClick={onClose}>✕</button>
+        </div>
+
+        {err && <div className="err" style={{ marginTop: 16 }}>{err}</div>}
+
+        <div className="fgrid" style={{ marginTop: 18 }}>
+          <div>
+            <label>How it ended</label>
+            <select value={closure} onChange={ev => { setClosure(ev.target.value); setErr(''); }}>
+              {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
+          <div><label>On</label><input type="date" value={when} onChange={ev => setWhen(ev.target.value)} /></div>
+        </div>
+
+        {needsCondition && (
+          <div className="fgrid">
+            <div style={{ flex: '1 1 100%' }}>
+              <label>Condition it came back in <span className="req">*</span></label>
+              <input value={condition} onChange={ev => setCondition(ev.target.value)} />
+            </div>
+          </div>
+        )}
+
+        <div style={{ borderTop: '1px solid var(--line2)', marginTop: 18, paddingTop: 16 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 9,
+            marginBottom: wiped ? 12 : 0, fontSize: 13.5, fontWeight: 400, color: 'var(--ink)' }}>
+            <input type="checkbox" checked={wiped}
+              style={{ width: 16, height: 16, accentColor: 'var(--accent)' }}
+              onChange={ev => setWiped(ev.target.checked)} />
+            {personal ? 'Bayzat account wiped from the device' : 'Device wiped'}
+          </label>
+          {wiped && (
+            <div>
+              <label>Evidence <span className="req">*</span></label>
+              <textarea rows={2} value={evidence} onChange={ev => setEvidence(ev.target.value)} />
+            </div>
+          )}
+        </div>
+
+        <button className="btn" disabled={busy} onClick={save} style={{ width: '100%', marginTop: 18 }}>
+          {busy ? 'Saving…' : personal ? 'Record it' : 'Close it out'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------- replace */
+function EmpReplace({ item, employee, cats, me, onClose, onSaved }) {
+  const asset = item.asset;
+  const [when, setWhen] = useState(today());
+  const [condition, setCondition] = useState('');
+  const [wiped, setWiped] = useState(false);
+  const [evidence, setEvidence] = useState('');
+  const [newCat, setNewCat] = useState(asset.category);
+  const [newSerial, setNewSerial] = useState('');
+  const [newTag, setNewTag] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  async function save() {
+    if (!condition.trim()) {
+      setErr('What condition did the old one come back in? The database refuses without it.');
+      return;
+    }
+    if (wiped && !evidence.trim()) { setErr('A wipe needs evidence behind it.'); return; }
+    if (!newSerial.trim() && !newTag.trim()) {
+      setErr('Give the replacement a serial or a tag so the two can be told apart in history.');
+      return;
+    }
+    setBusy(true); setErr('');
+
+    const newId = crypto.randomUUID();
+    const { error: aErr } = await supabase.from('assets').insert({
+      id: newId, category: newCat, ownership: asset.ownership,
+      serial: newSerial.trim() || null, tag: newTag.trim() || null,
+      source: 'manual', created_by: me, updated_by: me, status: 'assigned',
+      notes: 'Replaces ' + assetHandle(asset)
+    });
+    if (aErr) { setErr(aErr.message); setBusy(false); return; }
+
+    const closePatch = {
+      returned_on: when, returned_by: me, closure: 'replaced', return_condition: condition.trim()
+    };
+    if (wiped) { closePatch.wiped_at = new Date().toISOString(); closePatch.wipe_evidence = evidence.trim(); }
+    const { error: cErr } = await supabase.from('asset_assignments').update(closePatch).eq('id', item.id);
+    if (cErr) { setErr(cErr.message); setBusy(false); return; }
+
+    const { error: nErr } = await supabase.from('asset_assignments').insert({
+      asset_id: newId, employee_id: String(employee.id), person: fullName(employee),
+      work_email: employee.work_email, assigned_on: when, assigned_by: me,
+      assign_note: 'Replacement for ' + assetHandle(asset) + '.',
+      replaces_asset_id: asset.id
+    });
+    setBusy(false);
+    if (nErr) { setErr(nErr.message); return; }
+    onSaved();
+  }
+
+  return (
+    <div className="veil" onClick={onClose}>
+      <div className="panel" onClick={ev => ev.stopPropagation()}>
+        <div className="ph">
+          <div>
+            <h2 style={{ fontSize: 17, fontWeight: 600 }}>Replace {assetHandle(asset)}</h2>
+            <p className="note-txt" style={{ marginTop: 5 }}>
+              {fullName(employee)} keeps the same holder — only the device changes
+            </p>
+          </div>
+          <button className="x" onClick={onClose}>✕</button>
+        </div>
+
+        {err && <div className="err" style={{ marginTop: 16 }}>{err}</div>}
+
+        <div className="bt" style={{ marginTop: 18 }}>The old one</div>
+        <div className="fgrid">
+          <div>
+            <label>Condition it came back in <span className="req">*</span></label>
+            <input value={condition} onChange={ev => setCondition(ev.target.value)} />
+          </div>
+          <div><label>On</label><input type="date" value={when} onChange={ev => setWhen(ev.target.value)} /></div>
+        </div>
+
+        <div style={{ borderTop: '1px solid var(--line2)', marginTop: 4, paddingTop: 16 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 9,
+            marginBottom: wiped ? 12 : 0, fontSize: 13.5, fontWeight: 400, color: 'var(--ink)' }}>
+            <input type="checkbox" checked={wiped}
+              style={{ width: 16, height: 16, accentColor: 'var(--accent)' }}
+              onChange={ev => setWiped(ev.target.checked)} />
+            Old device wiped
+          </label>
+          {wiped && (
+            <div>
+              <label>Evidence <span className="req">*</span></label>
+              <textarea rows={2} value={evidence} onChange={ev => setEvidence(ev.target.value)} />
+            </div>
+          )}
+        </div>
+
+        <div className="bt" style={{ marginTop: 20 }}>The new one</div>
+        <div className="fgrid">
+          <div>
+            <label>Category</label>
+            <select value={newCat} onChange={ev => setNewCat(ev.target.value)}>
+              {cats.map(c => <option key={c.slug} value={c.slug}>{c.label}</option>)}
+            </select>
+          </div>
+          <div><label>Tag</label><input value={newTag} onChange={ev => setNewTag(ev.target.value)} /></div>
+        </div>
+        <div className="fgrid">
+          <div style={{ flex: '1 1 100%' }}>
+            <label>Serial</label>
+            <input value={newSerial} onChange={ev => setNewSerial(ev.target.value)} />
+          </div>
+        </div>
+
+        <button className="btn" disabled={busy} onClick={save} style={{ width: '100%', marginTop: 14 }}>
+          {busy ? 'Saving…' : 'Replace it'}
+        </button>
+      </div>
     </div>
   );
 }
