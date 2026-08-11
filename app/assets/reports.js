@@ -1,9 +1,23 @@
 'use client';
-import { useMemo } from 'react';
-import { OWNERSHIP_LABEL, pretty, describe, handle,
+import { useEffect, useMemo, useState } from 'react';
+import { OWNERSHIP_LABEL, pretty, describe, handle, supabase,
          CategoryIcon, categoryTone, TONE_VAR, Donut } from './shared';
 
 export default function Reports({ assets }) {
+  /* Who has left, so held-but-not-returned can be told apart from an
+   * ordinary open assignment. Nothing else in this tile has ever needed
+   * employee data before -- this is the one report that genuinely does. */
+  const [leaverIds, setLeaverIds] = useState(null);
+  useEffect(() => {
+    supabase.from('employees').select('id').eq('status', 'leaver')
+      .then(({ data }) => setLeaverIds(new Set((data || []).map(e => String(e.id)))));
+  }, []);
+
+  const notReturned = useMemo(() => {
+    if (!leaverIds) return [];
+    return assets.filter(a => a.assignment_id && a.holder_id && leaverIds.has(String(a.holder_id)));
+  }, [assets, leaverIds]);
+
   const live = useMemo(() => assets.filter(a =>
     !['retired', 'released', 'returned_to_lessor'].includes(a.status)), [assets]);
 
@@ -151,6 +165,23 @@ export default function Reports({ assets }) {
             <span className="chip red">{a.holder || a.holder_email || '—'}</span>
           </div>
         ))}
+      </div>
+
+      <div className="panelbox">
+        <div className="bt">Not returned</div>
+        <p className="note-txt" style={{ marginBottom: 14 }}>
+          Still open against someone whose employee record already says leaver.
+        </p>
+        {leaverIds === null ? <p className="note-txt">Checking…</p>
+          : notReturned.length === 0 ? <p className="note-txt">Nothing outstanding.</p>
+          : notReturned.map(a => (
+            <div className="mrow" key={a.id}>
+              <span className="mlbl" style={{ width: 'auto', flex: 1 }}>
+                {handle(a)} <span className="note-txt">{describe(a)}</span>
+              </span>
+              <span className="chip red">{a.holder || a.holder_email || '—'}</span>
+            </div>
+          ))}
       </div>
 
     </div>
