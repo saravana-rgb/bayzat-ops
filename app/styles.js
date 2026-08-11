@@ -35,13 +35,45 @@ export const homeCss = `
   line-height:1.08;margin:0}
 .hero-name{color:var(--accent)}
 .hero-sub{font-size:15px;color:var(--ink2);margin-top:12px;max-width:520px;line-height:1.6}
-.hero-numbers{display:flex;gap:34px;flex-wrap:wrap;margin-top:30px}
-.hero-num{display:flex;flex-direction:column}
-.hero-num b{font-size:40px;font-weight:600;letter-spacing:-1.4px;line-height:1}
-.hero-num span{font-size:12.5px;color:var(--ink3);margin-top:6px;font-weight:500}
-.hero-num.rose b{color:var(--rose)}
-.hero-num.olive b{color:var(--s4)}
-.hero-num.amber b{color:var(--amber)}
+
+/* the backlog count is not a dated event, so it does not sit on the
+ * timeline -- its own small pill instead, distinct from the rail below */
+.hero-badge{display:inline-flex;align-items:center;gap:6px;margin-top:16px;
+  font:500 12.5px var(--font);color:var(--rose);background:var(--rose-soft);
+  padding:6px 14px;border-radius:999px;text-decoration:none;
+  transition:transform .12s var(--ease)}
+.hero-badge:hover{transform:translateY(-1px)}
+
+/* the rail -- one card per lane, anchored to a line, each carrying a real
+ * icon, a real relative-day label, and who or what it concerns */
+.rail{margin-top:30px;position:relative}
+.rail-track{position:absolute;top:15px;left:0;right:0;height:2px;background:var(--line)}
+.rail-items{display:flex;gap:16px;flex-wrap:wrap;position:relative}
+.rail-item{flex:1;min-width:210px;display:flex;flex-direction:column;
+  text-decoration:none;transition:transform .15s var(--ease)}
+.rail-item:hover{transform:translateY(-3px)}
+.rail-item.rose{color:var(--rose)}
+.rail-item.olive{color:var(--s4)}
+.rail-item.amber{color:var(--amber)}
+.rail-dot{width:30px;height:30px;border-radius:50%;background:var(--surface);
+  border:2px solid var(--line);display:grid;place-items:center;flex:none;
+  position:relative;z-index:1;transition:border-color .15s var(--ease)}
+.rail-item:hover .rail-dot{border-color:currentColor}
+.rail-tick{width:2px;height:12px;background:var(--line);margin-left:14px}
+.rail-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:14px 16px}
+.rail-item.rose .rail-card{border-top:2px solid var(--rose)}
+.rail-item.olive .rail-card{border-top:2px solid var(--s4)}
+.rail-item.amber .rail-card{border-top:2px solid var(--amber)}
+.rail-when{font:600 11.5px var(--font);letter-spacing:.2px}
+.rail-who{display:flex;align-items:center;gap:8px;margin-top:9px}
+.rail-avatar{width:24px;height:24px;border-radius:50%;background:var(--line2);
+  color:var(--ink2);display:grid;place-items:center;font:600 10px var(--font);flex:none}
+.rail-doc-ico{width:24px;height:24px;border-radius:50%;background:var(--line2);
+  color:var(--ink2);display:grid;place-items:center;flex:none}
+.rail-name{font:600 13.5px var(--font);color:var(--ink)}
+.rail-why{font:400 12px var(--font);color:var(--ink2);margin-top:7px;line-height:1.5}
+.rail-more{display:block;font:500 11.5px var(--font);margin-top:8px}
 
 /* a small heading gives the tile grid its own second act, rather than
  * letting the hero trail straight into a wall of cards */
@@ -52,7 +84,8 @@ export const homeCss = `
 @media(max-width:640px){
   .hero{padding:34px 0 30px}
   .hero-title{font-size:30px}
-  .hero-num b{font-size:32px}
+  .rail-items{flex-direction:column}
+  .rail-track{display:none}
 }
 
 /* small inline icons standing in for the plain arrow characters the
