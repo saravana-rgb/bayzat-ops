@@ -150,7 +150,7 @@ function Directory({ email }) {
     const cols = ['employee_id','first_name','last_name','preferred_name','work_email',
                   'personal_email','mobile_no','work_no','title','department','reports_to',
                   'entity','location','office','hiring_date','nationality','gender',
-                  'asset_type','asset_serial','leasing_company','asset_note','status','onboarding_ref'];
+                  'asset_type','asset_serial','asset_os','leasing_company','asset_note','status','onboarding_ref'];
     const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
     const lines = [cols.concat(['missing_fields']).map(q).join(',')];
     rowsToWrite.forEach(e => lines.push(
@@ -272,7 +272,7 @@ function Directory({ email }) {
         <Pager page={page} perPage={PER_PAGE} total={list.length} onPage={setPage} />
       )}
 
-      {open && <Drawer e={open} facets={facets} onClose={() => setOpenId(null)} onSave={save}
+      {open && <Drawer e={open} facets={facets} email={email} onClose={() => setOpenId(null)} onSave={save}
                        onDelete={() => setDeleting(open)} onRestore={() => restore(open)} />}
 
       {deleting && <ConfirmRemove person={deleting} onCancel={() => setDeleting(null)}
@@ -379,7 +379,123 @@ const Stat = ({ n, l, c }) => (
 
 /** Everything about one person, editable in place. Required fields that are
  *  empty are outlined red, so what needs doing is visible without reading. */
-function Drawer({ e, facets, onClose, onSave, onDelete, onRestore }) {
+/* Everything past the one device this record was built to hold lives in
+ * the Assets register, not in a second set of columns bolted onto
+ * employees. This reads and writes the real assets/asset_assignments
+ * tables directly -- the same ones the Assets tile itself uses -- so an
+ * asset added here is a real, tracked asset, not a duplicate the Assets
+ * tile knows nothing about. */
+function OtherAssets({ employee, email }) {
+  const [items, setItems] = useState(null);
+  const [cats, setCats] = useState([]);
+  const [adding, setAdding] = useState(false);
+  const [f, setF] = useState({ category: 'laptop', ownership: 'bayzat', serial: '', tag: '' });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const load = useCallback(async () => {
+    const [asn, cat] = await Promise.all([
+      supabase.from('asset_assignments').select('*')
+        .eq('employee_id', String(employee.id)).is('returned_on', null),
+      supabase.from('asset_categories').select('*').eq('active', true).order('sort_order')
+    ]);
+    setCats(cat.data || []);
+    const ids = (asn.data || []).map(a => a.asset_id);
+    if (ids.length === 0) { setItems([]); return; }
+    const { data: assetsData } = await supabase.from('assets').select('*').in('id', ids);
+    const byId = Object.fromEntries((assetsData || []).map(a => [a.id, a]));
+    setItems((asn.data || []).map(a => ({ ...a, asset: byId[a.asset_id] })).filter(x => x.asset));
+  }, [employee.id]);
+  useEffect(() => { load(); }, [load]);
+
+  const catLabel = slug => (cats.find(c => c.slug === slug) || {}).label || slug;
+  const ownLabel = v => ({ bayzat: 'Bayzat owned', leasing: 'Leased', personal: 'Personal device' })[v] || v;
+
+  async function submitAsset() {
+    setBusy(true); setErr('');
+    const newId = crypto.randomUUID();
+    const { error: aErr } = await supabase.from('assets').insert({
+      id: newId, category: f.category, ownership: f.ownership,
+      serial: f.serial.trim() || null, tag: f.tag.trim() || null,
+      source: 'manual', created_by: email, updated_by: email, status: 'assigned'
+    });
+    if (aErr) { setErr(aErr.message); setBusy(false); return; }
+
+    const { error: asErr } = await supabase.from('asset_assignments').insert({
+      asset_id: newId, employee_id: String(employee.id),
+      person: fullName(employee), work_email: employee.work_email,
+      assigned_by: email, assign_note: 'Added from the employee record.'
+    });
+    setBusy(false);
+    if (asErr) { setErr(asErr.message); return; }
+    setF({ category: 'laptop', ownership: 'bayzat', serial: '', tag: '' });
+    setAdding(false);
+    load();
+  }
+
+  return (
+    <div>
+      <div className="sec">Other assets</div>
+
+      {items === null ? (
+        <p className="note-txt">Loading…</p>
+      ) : items.length > 0 ? (
+        <div className="fgrid" style={{ marginBottom: 14 }}>
+          {items.map(it => (
+            <div key={it.id} className="field">
+              <label>{catLabel(it.asset.category)}</label>
+              <div className="note-txt">
+                {it.asset.tag || it.asset.serial || 'no tag'}
+                {it.asset.serial && it.asset.tag ? ' · ' + it.asset.serial : ''}
+                {' · ' + ownLabel(it.asset.ownership)}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : !adding && (
+        <p className="note-txt" style={{ marginBottom: 14 }}>
+          Nothing else recorded for them in the Assets register.
+        </p>
+      )}
+
+      {!adding ? (
+        <button className="mini" onClick={() => setAdding(true)}>+ Add another asset</button>
+      ) : (
+        <div className="fgrid">
+          {err && <div className="err" style={{ gridColumn: '1 / -1' }}>{err}</div>}
+          <div className="field">
+            <label>Category</label>
+            <select value={f.category} onChange={ev => setF(p => ({ ...p, category: ev.target.value }))}>
+              {cats.map(c => <option key={c.slug} value={c.slug}>{c.label}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label>Owned by</label>
+            <select value={f.ownership} onChange={ev => setF(p => ({ ...p, ownership: ev.target.value }))}>
+              {ASSET_TYPES.filter(([v]) => v !== 'none').map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label>Serial</label>
+            <input value={f.serial} onChange={ev => setF(p => ({ ...p, serial: ev.target.value }))} />
+          </div>
+          <div className="field">
+            <label>Tag</label>
+            <input value={f.tag} onChange={ev => setF(p => ({ ...p, tag: ev.target.value }))} />
+          </div>
+          <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8 }}>
+            <button className="btn ghost" onClick={() => { setAdding(false); setErr(''); }}>Cancel</button>
+            <button className="btn" disabled={busy} onClick={submitAsset}>
+              {busy ? 'Adding…' : 'Add it'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Drawer({ e, facets, email, onClose, onSave, onDelete, onRestore }) {
   const [form, setForm] = useState(e);
   const [busy, setBusy] = useState(false);
   useEffect(() => { setForm(e); }, [e]);
@@ -465,6 +581,8 @@ function Drawer({ e, facets, onClose, onSave, onDelete, onRestore }) {
             </div>
           </div>
         ))}
+
+        <OtherAssets employee={e} email={email} />
 
         {e.status === 'deleted'
           ? <>
