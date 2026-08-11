@@ -76,6 +76,8 @@ function Register({ assets, cats, me, onReload }) {
   const [editing, setEditing] = useState(null);
   const [assigning, setAssigning] = useState(null);
   const [returning, setReturning] = useState(null);
+  const [replacing, setReplacing] = useState(null);
+  const [sending, setSending] = useState(null);
   const [history, setHistory] = useState(null);
 
   function flashIt(msg) {
@@ -166,6 +168,8 @@ function Register({ assets, cats, me, onReload }) {
               onEdit={() => setEditing(a)}
               onAssign={() => setAssigning(a)}
               onReturn={() => setReturning(a)}
+              onReplace={() => setReplacing(a)}
+              onSend={() => setSending(a)}
               onHistory={() => setHistory(a)} />
           ))}
         </div>
@@ -187,6 +191,14 @@ function Register({ assets, cats, me, onReload }) {
         onClose={() => setReturning(null)}
         onSaved={() => { setReturning(null); saved('Closed out.'); }} />}
 
+      {replacing && <Replace asset={replacing} cats={cats} me={me}
+        onClose={() => setReplacing(null)}
+        onSaved={() => { setReplacing(null); saved('Replaced.'); }} />}
+
+      {sending && <SendEmail asset={sending} me={me}
+        onClose={() => setSending(null)}
+        onSaved={() => { setSending(null); flashIt('Marked as sent.'); }} />}
+
       {history && <History asset={history} onClose={() => setHistory(null)} />}
     </>
   );
@@ -203,7 +215,7 @@ const Stat = ({ n, l, c, icon, onClick }) => (
   </div>
 );
 
-function Row({ a, onEdit, onAssign, onReturn, onHistory }) {
+function Row({ a, onEdit, onAssign, onReturn, onReplace, onSend, onHistory }) {
   const open = !!a.assignment_id;
   const gone = ['retired', 'released', 'returned_to_lessor'].includes(a.status);
 
@@ -237,9 +249,14 @@ function Row({ a, onEdit, onAssign, onReturn, onHistory }) {
       <span className="a-acts">
         <span className="mini" onClick={e => { e.stopPropagation(); onEdit(); }}>Edit</span>
         {open
-          ? <span className="mini" onClick={e => { e.stopPropagation(); onReturn(); }}>
-              {a.ownership === 'personal' ? 'Remove access' : 'Return'}
-            </span>
+          ? <>
+              <span className="mini" onClick={e => { e.stopPropagation(); onReturn(); }}>
+                {a.ownership === 'personal' ? 'Remove access' : 'Return'}
+              </span>
+              {a.ownership !== 'personal' &&
+                <span className="mini" onClick={e => { e.stopPropagation(); onReplace(); }}>Replace</span>}
+              <span className="mini" onClick={e => { e.stopPropagation(); onSend(); }}>Email</span>
+            </>
           : gone ? null
           : <span className="mini" onClick={e => { e.stopPropagation(); onAssign(); }}>Assign</span>}
       </span>
@@ -733,6 +750,262 @@ function Return({ asset, me, onClose, onSaved }) {
   );
 }
 
+/* -------------------------------------------------------- replace
+ * Closing the old assignment and creating the new one as two separate
+ * actions would leave history reading as two unrelated events -- one
+ * asset quietly returned, an unrelated one showing up later. This does
+ * both in one step and records which replaced which, so v_asset_history
+ * can show the connection from either side of the swap. */
+
+function Replace({ asset, cats, me, onClose, onSaved }) {
+  const [when, setWhen] = useState(today());
+  const [condition, setCondition] = useState('');
+  const [wiped, setWiped] = useState(false);
+  const [evidence, setEvidence] = useState('');
+  const [newCat, setNewCat] = useState(asset.category);
+  const [newSerial, setNewSerial] = useState('');
+  const [newTag, setNewTag] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const firstRef = useRef(null);
+  usePanelKeys(onClose, firstRef);
+
+  async function save() {
+    if (!condition.trim()) {
+      setErr('What condition did the old one come back in? The database refuses without it.');
+      return;
+    }
+    if (wiped && !evidence.trim()) {
+      setErr('A wipe needs evidence behind it — a ticket, a link, or who witnessed it.');
+      return;
+    }
+    if (!newSerial.trim() && !newTag.trim()) {
+      setErr('Give the replacement a serial or a tag so the two can be told apart in history.');
+      return;
+    }
+    setBusy(true); setErr('');
+
+    const newId = crypto.randomUUID();
+    const { error: aErr } = await supabase.from('assets').insert({
+      id: newId, category: newCat, ownership: asset.ownership,
+      serial: newSerial.trim() || null, tag: newTag.trim() || null,
+      source: 'manual', created_by: me, updated_by: me, status: 'assigned',
+      notes: 'Replaces ' + handle(asset)
+    });
+    if (aErr) { setErr(aErr.message); setBusy(false); return; }
+
+    const closePatch = {
+      returned_on: when, returned_by: me, closure: 'replaced',
+      return_condition: condition.trim()
+    };
+    if (wiped) { closePatch.wiped_at = new Date().toISOString(); closePatch.wipe_evidence = evidence.trim(); }
+    const { error: cErr } = await supabase.from('asset_assignments')
+      .update(closePatch).eq('id', asset.assignment_id);
+    if (cErr) { setErr(cErr.message); setBusy(false); return; }
+
+    const { error: nErr } = await supabase.from('asset_assignments').insert({
+      asset_id: newId, employee_id: asset.holder_id, person: asset.holder,
+      work_email: asset.holder_email, assigned_on: when, assigned_by: me,
+      assign_note: 'Replacement for ' + handle(asset) + '.',
+      replaces_asset_id: asset.id
+    });
+    setBusy(false);
+    if (nErr) { setErr(nErr.message); return; }
+    onSaved();
+  }
+
+  return (
+    <div className="veil" onClick={onClose}>
+      <div className="panel mood-edit" onClick={e => e.stopPropagation()}>
+        <div className="ph">
+          <div>
+            <h2 style={{ fontSize: 17, fontWeight: 600 }}>Replace {handle(asset)}</h2>
+            <p className="note-txt" style={{ marginTop: 5 }}>
+              {asset.holder || asset.holder_email} keeps the same holder — only the device changes
+            </p>
+          </div>
+          <button className="x" onClick={onClose}>✕</button>
+        </div>
+
+        {err && <div className="err" style={{ marginTop: 16 }}>{err}</div>}
+
+        <div className="bt" style={{ marginTop: 18 }}>The old one</div>
+        <div className="frow">
+          <div>
+            <label>Condition it came back in <span className="req">*</span></label>
+            <input ref={firstRef} value={condition} onChange={e => setCondition(e.target.value)}
+              placeholder="e.g. good, screen cracked" />
+          </div>
+          <div><label>On</label><input type="date" value={when} onChange={e => setWhen(e.target.value)} /></div>
+        </div>
+
+        <div style={{ borderTop: '1px solid var(--line2)', marginTop: 4, paddingTop: 16 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 9,
+            marginBottom: wiped ? 12 : 0, fontSize: 13.5, fontWeight: 400, color: 'var(--ink)' }}>
+            <input type="checkbox" checked={wiped}
+              style={{ width: 16, height: 16, accentColor: 'var(--accent)' }}
+              onChange={e => setWiped(e.target.checked)} />
+            Old device wiped
+          </label>
+          {wiped && (
+            <div className="appear">
+              <label>Evidence — ticket, link, or who witnessed it <span className="req">*</span></label>
+              <textarea rows={2} value={evidence} onChange={e => setEvidence(e.target.value)} />
+            </div>
+          )}
+        </div>
+
+        <div className="bt" style={{ marginTop: 20 }}>The new one</div>
+        <div className="frow">
+          <div>
+            <label>Category</label>
+            <select value={newCat} onChange={e => setNewCat(e.target.value)}>
+              {cats.map(c => <option key={c.slug} value={c.slug}>{c.label}</option>)}
+            </select>
+          </div>
+          <div><label>Tag</label><input value={newTag} onChange={e => setNewTag(e.target.value)} /></div>
+        </div>
+        <div className="frow">
+          <div style={{ flex: '1 1 100%' }}>
+            <label>Serial</label>
+            <input value={newSerial} onChange={e => setNewSerial(e.target.value)} />
+          </div>
+        </div>
+        <p className="note-txt" style={{ marginBottom: 4 }}>
+          Ownership carries over as {OWNERSHIP_LABEL[asset.ownership]} — a replacement stays under the
+          same arrangement as the device it's replacing.
+        </p>
+
+        <button className="btn" disabled={busy} onClick={save} style={{ width: '100%', marginTop: 14 }}>
+          {busy ? 'Saving…' : 'Replace it'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------- send email
+ * Nothing is sent from here. This generates a one-time random link, saves
+ * it against the assignment, and hands back a ready-to-send draft -- the
+ * person using this tile sends it from their own inbox. The link is the
+ * only thing that lets a click be recorded: it is a long random value,
+ * not tied to any login, and the two functions it calls on the other end
+ * (ack_lookup, ack_confirm) can each only ever act on the one row that
+ * exact value points at. */
+
+function draftText(asset, token, me) {
+  const url = window.location.origin + '/acknowledge/' + token;
+  const firstName = (asset.holder || '').split(' ')[0] || 'there';
+  const senderRaw = (me || '').split('@')[0].split('.')[0];
+  const sender = senderRaw ? senderRaw.charAt(0).toUpperCase() + senderRaw.slice(1) : 'Bayzat IT';
+  const deviceLine = [asset.make, asset.model].filter(Boolean).join(' ') || describe(asset);
+  return {
+    subject: 'Your Bayzat equipment — please confirm receipt',
+    body:
+      'Hi ' + firstName + ',\n\n' +
+      "You've been issued the following:\n\n" +
+      '  Device: ' + deviceLine + '\n' +
+      '  Serial: ' + (asset.serial || 'not recorded') + '\n\n' +
+      "Please confirm you've received it by opening the link below:\n\n" +
+      '  ' + url + '\n\n' +
+      'This takes a few seconds and helps us keep accurate records of company equipment.\n\n' +
+      'Thanks,\n' + sender + '\nBayzat IT'
+  };
+}
+
+function SendEmail({ asset, me, onClose, onSaved }) {
+  const [row, setRow] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [copied, setCopied] = useState(false);
+  usePanelKeys(onClose, null);
+
+  const load = useCallback(async () => {
+    const { data, error } = await supabase.from('asset_assignments')
+      .select('ack_token, ack_sent_at, ack_sent_by, ack_acknowledged_at')
+      .eq('id', asset.assignment_id).single();
+    if (error) { setErr(error.message); return; }
+    setRow(data);
+  }, [asset.assignment_id]);
+  useEffect(() => { load(); }, [load]);
+
+  async function ensureToken() {
+    if (row && row.ack_token) return row.ack_token;
+    setBusy(true); setErr('');
+    const newToken = crypto.randomUUID();
+    const { error } = await supabase.from('asset_assignments').update({
+      ack_token: newToken, ack_sent_at: new Date().toISOString(), ack_sent_by: me
+    }).eq('id', asset.assignment_id);
+    setBusy(false);
+    if (error) { setErr(error.message); return null; }
+    await load();
+    onSaved();
+    return newToken;
+  }
+
+  async function openDraft() {
+    const t = await ensureToken();
+    if (!t) return;
+    const { subject, body } = draftText(asset, t, me);
+    window.location.href = 'mailto:' + encodeURIComponent(asset.holder_email || '') +
+      '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  }
+
+  async function copyDraft() {
+    const t = await ensureToken();
+    if (!t) return;
+    const { subject, body } = draftText(asset, t, me);
+    navigator.clipboard.writeText('Subject: ' + subject + '\n\n' + body).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    });
+  }
+
+  return (
+    <div className="veil" onClick={onClose}>
+      <div className="panel mood-assign" onClick={e => e.stopPropagation()}>
+        <div className="ph">
+          <div>
+            <h2 style={{ fontSize: 17, fontWeight: 600 }}>Allocation email — {handle(asset)}</h2>
+            <p className="note-txt" style={{ marginTop: 5 }}>
+              {asset.holder || asset.holder_email}
+            </p>
+          </div>
+          <button className="x" onClick={onClose}>✕</button>
+        </div>
+
+        {err && <div className="err" style={{ marginTop: 16 }}>{err}</div>}
+
+        {row && row.ack_acknowledged_at ? (
+          <div className="headline" style={{ margin: '16px 0' }}>
+            <p>Acknowledged on {pretty(row.ack_acknowledged_at.slice(0, 10))}. Nothing further to do.</p>
+          </div>
+        ) : row && row.ack_sent_at ? (
+          <div className="headline" style={{ margin: '16px 0' }}>
+            <p>Sent on {pretty(row.ack_sent_at.slice(0, 10))} by {(row.ack_sent_by || '').split('@')[0]},
+              not yet acknowledged. You can send it again below.</p>
+          </div>
+        ) : (
+          <p className="note-txt" style={{ marginTop: 16 }}>
+            This opens a draft in your own email client — nothing sends from here directly.
+          </p>
+        )}
+
+        {!(row && row.ack_acknowledged_at) && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            <button className="btn" disabled={busy} onClick={openDraft}>
+              {busy ? 'Preparing…' : 'Open email draft'}
+            </button>
+            <button className="btn ghost" disabled={busy} onClick={copyDraft}>
+              {copied ? 'Copied' : 'Copy text instead'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* -------------------------------------------------------- history */
 
 function History({ asset, onClose }) {
@@ -773,6 +1046,9 @@ function History({ asset, onClose }) {
                 <span className={'dot' + (['closed', 'wiped'].includes(e.kind) ? ' done' : '')} />
                 <span>
                   <b>{e.kind}</b>{e.detail ? ' — ' + e.detail : ''}
+                  {e.replaces_asset_id &&
+                    <> — replaces <span className="a-ref">
+                      {e.replaces_tag || e.replaces_serial || 'a previous device'}</span></>}
                   <span className="who"> · {pretty(e.at.slice(0, 10))} · {e.actor}</span>
                 </span>
               </div>
