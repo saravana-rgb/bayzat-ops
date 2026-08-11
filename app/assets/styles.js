@@ -51,6 +51,11 @@ export const assetsCss = `
 .panel.wide{max-width:760px}
 .req{font-style:normal;font-size:14px;font-weight:600;color:var(--rose);line-height:1}
 
+/* a field that appears because of a choice just made should say so, not
+   just snap into place */
+@keyframes assetAppear{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.appear{animation:assetAppear .16s var(--ease)}
+
 /* ------------------------------------------------------- by employee */
 .grp-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
   flex-wrap:wrap;margin-bottom:10px}
