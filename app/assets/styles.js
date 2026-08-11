@@ -134,4 +134,26 @@ export const assetsCss = `
 .donut-row{display:flex;align-items:center;gap:9px;font:400 13px var(--font);color:var(--ink2)}
 .donut-dot{width:10px;height:10px;border-radius:50%;flex:none}
 .donut-n{margin-left:auto;font:600 13px var(--font);color:var(--ink)}
+
+/* one colour per action, so the row of buttons reads at a glance instead
+ * of being eight identical grey pills. Layered on top of .mini's own
+ * base shape and hover behaviour -- nothing about size or spacing
+ * changes, only the border and text colour when not hovered. */
+.mini.act-edit   {border-color:var(--s4);color:var(--s4)}
+.mini.act-assign {border-color:var(--s1);color:var(--s1)}
+.mini.act-return {border-color:var(--accent);color:var(--accent)}
+.mini.act-replace{border-color:var(--s3);color:var(--s3)}
+.mini.act-email  {border-color:var(--s6);color:var(--s6)}
+.mini.act-status {border-color:var(--s5);color:var(--s5)}
+.mini.act-delete {border-color:var(--rose);color:var(--rose)}
+.mini.act-restore{border-color:var(--emerald);color:var(--emerald)}
+
+/* pagination -- not a global class, replicated from the same rules the
+ * Employees tile already uses for its own Pager, since a tile's styles
+ * only load on its own route */
+.pager{display:flex;align-items:center;gap:14px;margin-top:20px;flex-wrap:wrap}
+.pinfo{font:400 12.5px var(--font);color:var(--ink3)}
+.pbtns{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.pbtns .mini[data-on="1"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.pdots{color:var(--ink3);padding:0 2px;align-self:center}
 `;
