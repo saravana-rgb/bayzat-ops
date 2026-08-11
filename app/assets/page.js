@@ -71,6 +71,7 @@ function Register({ assets, cats, me, onReload }) {
   const [own, setOwn] = useState('');
   const [q, setQ] = useState('');
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState(null);
   const [assigning, setAssigning] = useState(null);
   const [returning, setReturning] = useState(null);
   const [history, setHistory] = useState(null);
@@ -142,6 +143,7 @@ function Register({ assets, cats, me, onReload }) {
         <div className="assets">
           {shown.map(a => (
             <Row key={a.id} a={a}
+              onEdit={() => setEditing(a)}
               onAssign={() => setAssigning(a)}
               onReturn={() => setReturning(a)}
               onHistory={() => setHistory(a)} />
@@ -152,6 +154,10 @@ function Register({ assets, cats, me, onReload }) {
       {adding && <Add cats={cats} me={me}
         onClose={() => setAdding(false)}
         onSaved={() => { setAdding(false); onReload(); }} />}
+
+      {editing && <EditAsset asset={editing} cats={cats} me={me}
+        onClose={() => setEditing(null)}
+        onSaved={() => { setEditing(null); onReload(); }} />}
 
       {assigning && <Assign asset={assigning} me={me}
         onClose={() => setAssigning(null)}
@@ -170,7 +176,7 @@ const Stat = ({ n, l, c }) => (
   <div className={'stat' + (c ? ' ' + c : '')}><b>{n}</b><span>{l}</span></div>
 );
 
-function Row({ a, onAssign, onReturn, onHistory }) {
+function Row({ a, onEdit, onAssign, onReturn, onHistory }) {
   const open = !!a.assignment_id;
   const gone = ['retired', 'released', 'returned_to_lessor'].includes(a.status);
 
@@ -199,6 +205,7 @@ function Row({ a, onAssign, onReturn, onHistory }) {
         </span>
       </span>
       <span className="a-acts">
+        <span className="mini" onClick={e => { e.stopPropagation(); onEdit(); }}>Edit</span>
         {open
           ? <span className="mini" onClick={e => { e.stopPropagation(); onReturn(); }}>
               {a.ownership === 'personal' ? 'Remove access' : 'Return'}
@@ -329,6 +336,132 @@ function Add({ cats, me, onClose, onSaved }) {
 
         <button className="btn" disabled={busy} onClick={save} style={{ width: '100%' }}>
           {busy ? 'Saving…' : 'Add it'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------- edit
+ * Fixes a typo, corrects a warranty date, changes who owns it. Any
+ * synced field saved here (ownership, serial, category, tag, notes)
+ * re-reaches the employee record automatically while the asset is on
+ * open assignment -- that is the sync-on-asset-edit trigger, not this
+ * component; this only writes to assets. */
+
+function EditAsset({ asset, cats, me, onClose, onSaved }) {
+  const [f, setF] = useState({
+    category: asset.category, ownership: asset.ownership,
+    make: asset.make || '', model: asset.model || '', serial: asset.serial || '',
+    tag: asset.tag || '', location: asset.location || '',
+    lessor: asset.lessor || '', lease_until: asset.lease_until || '',
+    purchased_on: asset.purchased_on || '', warranty_until: asset.warranty_until || '',
+    notes: asset.notes || ''
+  });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const set = k => e => setF(p => ({ ...p, [k]: e.target.value }));
+  const ownershipChanged = f.ownership !== asset.ownership;
+
+  async function save() {
+    setBusy(true); setErr('');
+    const patch = { category: f.category, ownership: f.ownership, updated_by: me };
+    ['make', 'model', 'serial', 'tag', 'location', 'lessor', 'notes']
+      .forEach(k => { patch[k] = f[k].trim() || null; });
+    ['lease_until', 'purchased_on', 'warranty_until']
+      .forEach(k => { patch[k] = f[k] || null; });
+
+    const { error } = await supabase.from('assets').update(patch).eq('id', asset.id);
+    setBusy(false);
+    if (error) { setErr(error.message); return; }
+    onSaved();
+  }
+
+  return (
+    <div className="veil" onClick={onClose}>
+      <div className="panel" onClick={e => e.stopPropagation()}>
+        <div className="ph">
+          <div>
+            <h2 style={{ fontSize: 17, fontWeight: 600 }}>Edit {handle(asset)}</h2>
+            <p className="note-txt" style={{ marginTop: 5 }}>
+              Changes here reach the employee record on their own if this is
+              currently assigned.
+            </p>
+          </div>
+          <button className="x" onClick={onClose}>✕</button>
+        </div>
+
+        {err && <div className="err" style={{ marginTop: 16 }}>{err}</div>}
+
+        <div className="frow" style={{ marginTop: 18 }}>
+          <div>
+            <label>Category</label>
+            <select value={f.category} onChange={set('category')}>
+              {cats.map(c => <option key={c.slug} value={c.slug}>{c.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label>Owned by</label>
+            <select value={f.ownership} onChange={set('ownership')}>
+              {OWNERSHIP.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {ownershipChanged && (
+          <div className="headline" style={{ margin: '4px 0 18px' }}>
+            <p>Some ownership and status combinations do not make sense
+              together -- a personal device cannot sit in stock, for one.
+              If this save is refused, that is why.</p>
+          </div>
+        )}
+
+        <div className="frow">
+          <div><label>Make</label><input value={f.make} onChange={set('make')} /></div>
+          <div><label>Model</label><input value={f.model} onChange={set('model')} /></div>
+        </div>
+
+        <div className="frow">
+          <div><label>Serial</label><input value={f.serial} onChange={set('serial')} /></div>
+          <div><label>Tag</label><input value={f.tag} onChange={set('tag')} /></div>
+        </div>
+
+        <div className="frow">
+          <div><label>Location</label><input value={f.location} onChange={set('location')} /></div>
+        </div>
+
+        {f.ownership === 'leasing' && (
+          <div className="frow">
+            <div><label>Lessor</label><input value={f.lessor} onChange={set('lessor')} /></div>
+            <div>
+              <label>Lease ends</label>
+              <input type="date" value={f.lease_until} onChange={set('lease_until')} />
+            </div>
+          </div>
+        )}
+
+        {f.ownership === 'bayzat' && (
+          <div className="frow">
+            <div>
+              <label>Bought on</label>
+              <input type="date" value={f.purchased_on} onChange={set('purchased_on')} />
+            </div>
+            <div>
+              <label>Warranty ends</label>
+              <input type="date" value={f.warranty_until} onChange={set('warranty_until')} />
+            </div>
+          </div>
+        )}
+
+        <div className="frow">
+          <div style={{ flex: '1 1 100%' }}>
+            <label>Notes</label>
+            <textarea rows={3} value={f.notes} onChange={set('notes')} />
+          </div>
+        </div>
+
+        <button className="btn" disabled={busy} onClick={save} style={{ width: '100%' }}>
+          {busy ? 'Saving…' : 'Save changes'}
         </button>
       </div>
     </div>
