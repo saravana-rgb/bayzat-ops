@@ -17,6 +17,11 @@ export const LEASING_COMPANIES = [
   ['HOFY',             'HOFY']
 ];
 
+export const OS_OPTIONS = [
+  ['windows', 'Windows'],
+  ['mac',     'macOS']
+];
+
 export const GROUPS = [
   {
     name: 'Who they are',
@@ -46,6 +51,7 @@ export const GROUPS = [
     fields: [
       { k: 'asset_type',   l: 'Device type', req: true, type: 'select', options: ASSET_TYPES },
       { k: 'asset_serial', l: 'Serial number' },
+      { k: 'asset_os',     l: 'Operating system', type: 'select', options: OS_OPTIONS },
       /* Only applies -- and is only required -- when the device is leased.
        * Deliberately NOT `req: true`: REQUIRED (below) feeds a per-field
        * completeness report across every active employee, and this field
