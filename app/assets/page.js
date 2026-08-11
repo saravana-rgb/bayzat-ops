@@ -947,8 +947,15 @@ function SendEmail({ asset, me, onClose, onSaved }) {
     const t = await ensureToken();
     if (!t) return;
     const { subject, body } = draftText(asset, t, me);
-    window.location.href = 'mailto:' + encodeURIComponent(asset.holder_email || '') +
-      '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    /* mailto: hands off to whatever the OS has registered as the default
+     * mail app -- often nothing, and rarely Gmail specifically even when
+     * that is what someone actually uses. Gmail's own compose URL opens
+     * its web interface directly, pre-filled, in a new tab. */
+    const gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1' +
+      '&to=' + encodeURIComponent(asset.holder_email || '') +
+      '&su=' + encodeURIComponent(subject) +
+      '&body=' + encodeURIComponent(body);
+    window.open(gmailUrl, '_blank');
   }
 
   async function copyDraft() {
@@ -987,14 +994,14 @@ function SendEmail({ asset, me, onClose, onSaved }) {
           </div>
         ) : (
           <p className="note-txt" style={{ marginTop: 16 }}>
-            This opens a draft in your own email client — nothing sends from here directly.
+            This opens a draft in Gmail — nothing sends from here directly.
           </p>
         )}
 
         {!(row && row.ack_acknowledged_at) && (
           <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
             <button className="btn" disabled={busy} onClick={openDraft}>
-              {busy ? 'Preparing…' : 'Open email draft'}
+              {busy ? 'Preparing…' : 'Open in Gmail'}
             </button>
             <button className="btn ghost" disabled={busy} onClick={copyDraft}>
               {copied ? 'Copied' : 'Copy text instead'}
