@@ -1,7 +1,8 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AuthGate, Bar, supabase, OWNERSHIP, OWNERSHIP_LABEL, STATUS_LABEL,
-         CLOSURES, statusClass, today, pretty, describe, handle, fullName }
+         CLOSURES, statusClass, today, pretty, describe, handle, fullName,
+         usePanelKeys }
   from './shared';
 import ByEmployee from './by-employee';
 import Reports from './reports';
@@ -70,11 +71,21 @@ function Register({ assets, cats, me, onReload }) {
   const [tab, setTab] = useState('all');
   const [own, setOwn] = useState('');
   const [q, setQ] = useState('');
+  const [flash, setFlash] = useState('');
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(null);
   const [assigning, setAssigning] = useState(null);
   const [returning, setReturning] = useState(null);
   const [history, setHistory] = useState(null);
+
+  function flashIt(msg) {
+    setFlash(msg);
+    setTimeout(() => setFlash(''), 1800);
+  }
+  function saved(msg) {
+    onReload();
+    flashIt(msg);
+  }
 
   const live = assets.filter(a => a.status !== 'retired' && a.status !== 'released'
                                 && a.status !== 'returned_to_lessor');
@@ -107,6 +118,7 @@ function Register({ assets, cats, me, onReload }) {
 
   return (
     <>
+      {flash && <div className="busy">{flash}</div>}
       <div className="stats">
         <Stat n={live.length} l="Live assets" />
         <Stat n={inUse.length} l="In use" c="calm" />
@@ -153,19 +165,19 @@ function Register({ assets, cats, me, onReload }) {
 
       {adding && <Add cats={cats} me={me}
         onClose={() => setAdding(false)}
-        onSaved={() => { setAdding(false); onReload(); }} />}
+        onSaved={() => { setAdding(false); saved('Added to the register.'); }} />}
 
       {editing && <EditAsset asset={editing} cats={cats} me={me}
         onClose={() => setEditing(null)}
-        onSaved={() => { setEditing(null); onReload(); }} />}
+        onSaved={() => { setEditing(null); saved('Changes saved.'); }} />}
 
       {assigning && <Assign asset={assigning} me={me}
         onClose={() => setAssigning(null)}
-        onSaved={() => { setAssigning(null); onReload(); }} />}
+        onSaved={() => { setAssigning(null); saved('Assigned.'); }} />}
 
       {returning && <Return asset={returning} me={me}
         onClose={() => setReturning(null)}
-        onSaved={() => { setReturning(null); onReload(); }} />}
+        onSaved={() => { setReturning(null); saved('Closed out.'); }} />}
 
       {history && <History asset={history} onClose={() => setHistory(null)} />}
     </>
@@ -227,6 +239,8 @@ function Add({ cats, me, onClose, onSaved }) {
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const firstRef = useRef(null);
+  usePanelKeys(onClose, firstRef);
   const set = k => e => setF(p => ({ ...p, [k]: e.target.value }));
 
   async function save() {
@@ -265,7 +279,7 @@ function Add({ cats, me, onClose, onSaved }) {
         <div className="frow" style={{ marginTop: 18 }}>
           <div>
             <label>Category</label>
-            <select value={f.category} onChange={set('category')}>
+            <select ref={firstRef} value={f.category} onChange={set('category')}>
               {cats.map(c => <option key={c.slug} value={c.slug}>{c.label}</option>)}
             </select>
           </div>
@@ -278,7 +292,7 @@ function Add({ cats, me, onClose, onSaved }) {
         </div>
 
         {f.ownership === 'personal' && (
-          <div className="headline" style={{ margin: '4px 0 18px' }}>
+          <div className="headline appear" style={{ margin: '4px 0 18px' }}>
             <p>A personal device cannot be collected or retired. At exit the
               only ending is that access is removed from it.</p>
           </div>
@@ -360,6 +374,8 @@ function EditAsset({ asset, cats, me, onClose, onSaved }) {
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const firstRef = useRef(null);
+  usePanelKeys(onClose, firstRef);
   const set = k => e => setF(p => ({ ...p, [k]: e.target.value }));
   const ownershipChanged = f.ownership !== asset.ownership;
 
@@ -396,7 +412,7 @@ function EditAsset({ asset, cats, me, onClose, onSaved }) {
         <div className="frow" style={{ marginTop: 18 }}>
           <div>
             <label>Category</label>
-            <select value={f.category} onChange={set('category')}>
+            <select ref={firstRef} value={f.category} onChange={set('category')}>
               {cats.map(c => <option key={c.slug} value={c.slug}>{c.label}</option>)}
             </select>
           </div>
@@ -409,7 +425,7 @@ function EditAsset({ asset, cats, me, onClose, onSaved }) {
         </div>
 
         {ownershipChanged && (
-          <div className="headline" style={{ margin: '4px 0 18px' }}>
+          <div className="headline appear" style={{ margin: '4px 0 18px' }}>
             <p>Some ownership and status combinations do not make sense
               together -- a personal device cannot sit in stock, for one.
               If this save is refused, that is why.</p>
@@ -478,6 +494,8 @@ function Assign({ asset, me, onClose, onSaved }) {
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const firstRef = useRef(null);
+  usePanelKeys(onClose, firstRef);
 
   useEffect(() => {
     const needle = q.trim();
@@ -527,7 +545,7 @@ function Assign({ asset, me, onClose, onSaved }) {
         <div className="frow" style={{ marginTop: 18 }}>
           <div style={{ flex: '1 1 100%' }}>
             <label>Who has it</label>
-            <input value={picked ? fullName(picked) : q} placeholder="Name or work email"
+            <input ref={firstRef} value={picked ? fullName(picked) : q} placeholder="Name or work email"
               onChange={e => { setPicked(null); setQ(e.target.value); }} />
           </div>
         </div>
@@ -575,6 +593,8 @@ function Return({ asset, me, onClose, onSaved }) {
   const [evidence, setEvidence] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const firstRef = useRef(null);
+  usePanelKeys(onClose, firstRef);
 
   const chosen = options.find(o => o[0] === closure);
   const needsCondition = chosen ? chosen[2] : false;
@@ -604,6 +624,18 @@ function Return({ asset, me, onClose, onSaved }) {
     onSaved();
   }
 
+  function onConditionKey(e) {
+    if (e.key === 'Enter') { e.preventDefault(); save(); }
+  }
+
+  /* Says out loud what pressing the button is about to do, so the form
+   * reflects the choices already made rather than staying silent until
+   * after they are submitted. */
+  const closureLabel = (chosen ? chosen[1] : closure).toLowerCase();
+  const summary = personal
+    ? `This removes access on ${pretty(when)}` + (wiped ? ', with the account wiped from the device.' : '.')
+    : `This marks it ${closureLabel} on ${pretty(when)}` + (wiped ? ', with the device wiped.' : '.');
+
   return (
     <div className="veil" onClick={onClose}>
       <div className="panel" onClick={e => e.stopPropagation()}>
@@ -632,7 +664,8 @@ function Return({ asset, me, onClose, onSaved }) {
         <div className="frow" style={{ marginTop: 18 }}>
           <div>
             <label>How it ended</label>
-            <select value={closure} onChange={e => { setClosure(e.target.value); setErr(''); }}>
+            <select ref={firstRef} value={closure}
+              onChange={e => { setClosure(e.target.value); setErr(''); }}>
               {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
@@ -640,32 +673,39 @@ function Return({ asset, me, onClose, onSaved }) {
         </div>
 
         {needsCondition && (
-          <div className="frow">
+          <div className="frow appear">
             <div style={{ flex: '1 1 100%' }}>
               <label>Condition it came back in <span className="req">*</span></label>
-              <input value={condition} onChange={e => setCondition(e.target.value)} />
+              <input value={condition} onChange={e => setCondition(e.target.value)}
+                onKeyDown={onConditionKey} placeholder="e.g. good, minor scuff on the lid" />
             </div>
           </div>
         )}
 
-        <div className="frow" style={{ alignItems: 'center' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 0 }}>
+        {/* the wipe question and its evidence live in one grouped block, so
+         * the two read as a single connected decision rather than a
+         * checkbox that happens to sit near an unrelated text box */}
+        <div style={{ borderTop: '1px solid var(--line2)', marginTop: 18, paddingTop: 16 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: wiped ? 12 : 0 }}>
             <input type="checkbox" style={{ width: 'auto' }} checked={wiped}
               onChange={e => setWiped(e.target.checked)} />
             {personal ? 'Bayzat account wiped from the device' : 'Device wiped'}
           </label>
+
+          {wiped && (
+            <div className="appear">
+              <label>Evidence — ticket, link, or who witnessed it <span className="req">*</span></label>
+              <textarea rows={2} value={evidence} onChange={e => setEvidence(e.target.value)}
+                placeholder="e.g. INC-4821, or witnessed by Aishwarya on the erase call" />
+            </div>
+          )}
         </div>
 
-        {wiped && (
-          <div className="frow">
-            <div style={{ flex: '1 1 100%' }}>
-              <label>Evidence — ticket, link, or who witnessed it</label>
-              <textarea rows={2} value={evidence} onChange={e => setEvidence(e.target.value)} />
-            </div>
-          </div>
-        )}
+        <div className="headline" style={{ margin: '18px 0 0' }}>
+          <p>{summary}</p>
+        </div>
 
-        <button className="btn" disabled={busy} onClick={save} style={{ width: '100%' }}>
+        <button className="btn" disabled={busy} onClick={save} style={{ width: '100%', marginTop: 18 }}>
           {busy ? 'Saving…' : personal ? 'Record it' : 'Close it out'}
         </button>
       </div>
@@ -677,6 +717,7 @@ function Return({ asset, me, onClose, onSaved }) {
 
 function History({ asset, onClose }) {
   const [rows, setRows] = useState(null);
+  usePanelKeys(onClose, null);
 
   useEffect(() => {
     let live = true;
