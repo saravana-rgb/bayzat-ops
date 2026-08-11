@@ -334,10 +334,9 @@ function Row({ a, inTrash, onEdit, onAssign, onReturn, onReplace, onSend,
         </span>
         <span className="sub">
           <span className="a-ref">{handle(a)}</span>
-          {' · ' + (open ? describe(a) : a.category_label)}
-          {a.serial ? ' · ' + a.serial : ''}
+          {a.serial && a.serial !== handle(a) ? ' · ' + a.serial : ''}
           {a.location ? ' · ' + a.location : ''}
-          {open ? ' · held since ' + pretty(a.assigned_on) : ''}
+          {open ? ' · since ' + pretty(a.assigned_on) : ''}
           {inTrash && a.delete_reason ? ' · ' + a.delete_reason : ''}
           {clock ? <> · {clock}</> : ''}
         </span>
