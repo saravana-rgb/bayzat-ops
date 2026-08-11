@@ -19,6 +19,60 @@ function LaneIcon({ kind }) {
   );
 }
 
+function railInitials(name) {
+  const parts = String(name || '').trim().split(/\s+/);
+  return (((parts[0] || '?')[0] || '') + ((parts[1] || '')[0] || '')).toUpperCase();
+}
+
+/* The rail's one job: for each thing actually happening today, show what
+ * kind it is, who or what it concerns, and why it matters -- using only
+ * fields the data really has. "when" here is always relative day language
+ * ("Starts today", "Expires in 4 days") because hiring_date, last_working_
+ * day and expiry_date are all dates, not timestamps -- there is no time of
+ * day to show, so the rail never claims one.
+ *
+ * Deliberately excludes the "records need attention" count: that is an
+ * ongoing backlog, not a dated event, and mixing it into a timeline would
+ * be mixing two different kinds of information into one visual language.
+ * It gets its own small badge instead, see HeroBadge below. */
+function TodayRail({ leaving, joining, expiring }) {
+  const lanes = [
+    { key: 'leaving', tone: 'rose', verb: 'leaving', href: '/offboarding', items: leaving, person: true },
+    { key: 'joining', tone: 'olive', verb: 'joining', href: '/onboarding', items: joining, person: true },
+    { key: 'expiring', tone: 'amber', verb: 'expiring', href: '/documents', items: expiring, person: false }
+  ].filter(l => l.items.length > 0);
+  if (lanes.length === 0) return null;
+
+  return (
+    <div className="rail">
+      <div className="rail-track" />
+      <div className="rail-items">
+        {lanes.map(lane => {
+          const top = lane.items[0];
+          return (
+            <a key={lane.key} className={'rail-item ' + lane.tone} href={lane.href}>
+              <span className="rail-dot"><LaneIcon kind={lane.key} /></span>
+              <span className="rail-tick" />
+              <span className="rail-card">
+                <span className="rail-when">{top.when}</span>
+                <span className="rail-who">
+                  {lane.person
+                    ? <span className="rail-avatar">{railInitials(top.name)}</span>
+                    : <span className="rail-doc-ico"><Icon name="documents" size={13} /></span>}
+                  <span className="rail-name">{top.name}</span>
+                </span>
+                <span className="rail-why">{top.why}</span>
+                {lane.items.length > 1 &&
+                  <span className="rail-more">+{lane.items.length - 1} more {lane.verb}</span>}
+              </span>
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /** One kind of work. Empty lanes still show, so the shape of the day is the
  *  same every morning and a glance tells you which side is busy. */
 function Lane({ kind, title, icon, blurb, items, href }) {
@@ -187,16 +241,12 @@ function Shell() {
                 ? 'Nothing is waiting on you — every joiner, leaver and licence is up to date.'
                 : `${total} thing${total > 1 ? 's need' : ' needs'} your attention.`}
           </p>
-          {d && total > 0 && (
-            <div className="hero-numbers">
-              {leaving.length > 0 && <div className="hero-num rose">
-                <b>{leaving.length}</b><span>Leaving</span></div>}
-              {joining.length > 0 && <div className="hero-num olive">
-                <b>{joining.length}</b><span>Joining</span></div>}
-              {expiring.length > 0 && <div className="hero-num amber">
-                <b>{expiring.length}</b><span>Expiring</span></div>}
-            </div>
+          {d && d.gaps.length > 0 && (
+            <a className="hero-badge" href="/employees">
+              {d.gaps.length} record{d.gaps.length > 1 ? 's' : ''} need attention
+            </a>
           )}
+          {d && <TodayRail leaving={leaving} joining={joining} expiring={expiring} />}
         </div>
       </div>
 
