@@ -78,6 +78,8 @@ function Register({ assets, cats, me, onReload }) {
   const [returning, setReturning] = useState(null);
   const [replacing, setReplacing] = useState(null);
   const [sending, setSending] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [settingStatus, setSettingStatus] = useState(null);
   const [history, setHistory] = useState(null);
 
   function flashIt(msg) {
@@ -89,27 +91,45 @@ function Register({ assets, cats, me, onReload }) {
     flashIt(msg);
   }
 
-  const live = assets.filter(a => a.status !== 'retired' && a.status !== 'released'
+  async function restore(a) {
+    const { error } = await supabase.from('assets')
+      .update({ deleted_at: null, deleted_by: null, delete_reason: null, updated_by: me })
+      .eq('id', a.id);
+    if (error) { flashIt(error.message); return; }
+    saved('Restored.');
+  }
+
+  /* trash is a separate world from everything else -- a deleted asset is
+   * never mixed into the live counts, the tabs, or the search, the same
+   * way a removed employee record disappears from every count elsewhere
+   * in this app rather than lingering as a zero-weight row */
+  const notDeleted = assets.filter(a => !a.deleted_at);
+  const trashed = assets.filter(a => a.deleted_at);
+
+  const live = notDeleted.filter(a => a.status !== 'retired' && a.status !== 'released'
                                 && a.status !== 'returned_to_lessor');
-  const inUse   = assets.filter(a => a.status === 'assigned');
-  const missing = assets.filter(a => a.status === 'missing');
-  const warranty = assets.filter(a =>
+  const inUse   = notDeleted.filter(a => a.status === 'assigned');
+  const missing = notDeleted.filter(a => a.status === 'missing');
+  const warranty = notDeleted.filter(a =>
     a.warranty_days !== null && a.warranty_days !== undefined && a.warranty_days <= 60
     && live.includes(a));
 
   const groups = [
-    ['all',      'All',       assets.length],
+    ['all',      'All',       notDeleted.length],
     ['assigned', 'In use',    inUse.length],
-    ['in_stock', 'In stock',  assets.filter(a => a.status === 'in_stock').length],
-    ['repair',   'Repair',    assets.filter(a => a.status === 'repair').length],
+    ['in_stock', 'In stock',  notDeleted.filter(a => a.status === 'in_stock').length],
+    ['repair',   'Repair',    notDeleted.filter(a => a.status === 'repair').length],
     ['missing',  'Missing',   missing.length],
-    ['gone',     'Gone',      assets.filter(a => ['returned_to_lessor', 'released'].includes(a.status)).length],
-    ['retired',  'Retired',   assets.filter(a => a.status === 'retired').length]
+    ['gone',     'Gone',      notDeleted.filter(a => ['returned_to_lessor', 'released'].includes(a.status)).length],
+    ['retired',  'Retired',   notDeleted.filter(a => a.status === 'retired').length],
+    ['trash',    'Trash',     trashed.length]
   ];
 
   const needle = q.trim().toLowerCase();
-  const shown = assets.filter(a => {
-    if (tab === 'gone') { if (!['returned_to_lessor', 'released'].includes(a.status)) return false; }
+  const pool = tab === 'trash' ? trashed : notDeleted;
+  const shown = pool.filter(a => {
+    if (tab === 'trash') { /* no further status filter -- trash is its own world */ }
+    else if (tab === 'gone') { if (!['returned_to_lessor', 'released'].includes(a.status)) return false; }
     else if (tab !== 'all' && a.status !== tab) return false;
     if (own && a.ownership !== own) return false;
     if (!needle) return true;
@@ -122,11 +142,11 @@ function Register({ assets, cats, me, onReload }) {
     <>
       {flash && <div className="busy">{flash}</div>}
       <div className="stats">
-        <Stat n={live.length} l="Live assets" icon="a2" />
-        <Stat n={inUse.length} l="In use" c="calm" icon="a1"
+        <Stat n={live.length} l="Live assets" icon="inventory" />
+        <Stat n={inUse.length} l="In use" c="calm" icon="in_use"
           onClick={() => setTab('assigned')} />
-        <Stat n={warranty.length} l="Warranty ending" c={warranty.length ? 'warm' : ''} icon="a5" />
-        <Stat n={missing.length} l="Missing" c={missing.length ? 'hot' : ''} icon="a2"
+        <Stat n={warranty.length} l="Warranty ending" c={warranty.length ? 'warm' : ''} icon="warranty" />
+        <Stat n={missing.length} l="Missing" c={missing.length ? 'hot' : ''} icon="missing"
           onClick={() => setTab('missing')} />
       </div>
 
@@ -158,18 +178,23 @@ function Register({ assets, cats, me, onReload }) {
               <path d="M4 4h16v16H4z" /><path d="M9 9h6v6H9z" />
             </svg>
           </div>
-          <b>{assets.length ? 'Nothing matches' : 'Nothing in the register yet'}</b>
-          <span>{assets.length ? 'Try a different search or filter.' : 'Add the first one above.'}</span>
+          <b>{pool.length ? 'Nothing matches' : tab === 'trash' ? 'Nothing in the trash' : 'Nothing in the register yet'}</b>
+          <span>{pool.length ? 'Try a different search or filter.'
+            : tab === 'trash' ? 'Deleted assets show up here, never gone for good.'
+            : 'Add the first one above.'}</span>
         </div>
       ) : (
         <div className="assets">
           {shown.map(a => (
-            <Row key={a.id} a={a}
+            <Row key={a.id} a={a} inTrash={tab === 'trash'}
               onEdit={() => setEditing(a)}
               onAssign={() => setAssigning(a)}
               onReturn={() => setReturning(a)}
               onReplace={() => setReplacing(a)}
               onSend={() => setSending(a)}
+              onDelete={() => setDeleting(a)}
+              onSetStatus={() => setSettingStatus(a)}
+              onRestore={() => restore(a)}
               onHistory={() => setHistory(a)} />
           ))}
         </div>
@@ -199,23 +224,45 @@ function Register({ assets, cats, me, onReload }) {
         onClose={() => setSending(null)}
         onSaved={() => { setSending(null); flashIt('Marked as sent.'); }} />}
 
+      {deleting && <DeleteAsset asset={deleting} me={me}
+        onClose={() => setDeleting(null)}
+        onSaved={() => { setDeleting(null); saved('Moved to trash.'); }} />}
+
+      {settingStatus && <SetStatus asset={settingStatus} me={me}
+        onClose={() => setSettingStatus(null)}
+        onSaved={() => { setSettingStatus(null); saved('Status updated.'); }} />}
+
       {history && <History asset={history} onClose={() => setHistory(null)} />}
     </>
   );
 }
 
+const STAT_ICON_PATH = {
+  inventory: 'M4 4h16v16H4z M9 9h6v6H9z',
+  in_use:    'M4 12l5 5L20 6',
+  warranty:  'M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z M12 9v4 M12 17h.01',
+  missing:   'M18 6L6 18 M6 6l12 12'
+};
+const STAT_TONE = { inventory: 'a2', in_use: 'a1', warranty: 'a5', missing: 'a2' };
+
 const Stat = ({ n, l, c, icon, onClick }) => (
   <div className={'stat' + (c ? ' ' + c : '') + (onClick ? ' tappable' : '')}
     onClick={onClick} role={onClick ? 'button' : undefined}>
-    {icon && <div className={'stat-ico tone-' + icon}>
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-        strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="6" /></svg>
-    </div>}
+    {icon && (
+      <div className={'stat-ico tone-' + (STAT_TONE[icon] || 'muted')}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {(STAT_ICON_PATH[icon] || '').split(' M').map((seg, i) =>
+            <path key={i} d={(i ? 'M' : '') + seg} />)}
+        </svg>
+      </div>
+    )}
     <b>{n}</b><span>{l}</span>
   </div>
 );
 
-function Row({ a, onEdit, onAssign, onReturn, onReplace, onSend, onHistory }) {
+function Row({ a, inTrash, onEdit, onAssign, onReturn, onReplace, onSend,
+               onDelete, onSetStatus, onRestore, onHistory }) {
   const open = !!a.assignment_id;
   const gone = ['retired', 'released', 'returned_to_lessor'].includes(a.status);
 
@@ -232,33 +279,52 @@ function Row({ a, onEdit, onAssign, onReturn, onReplace, onSend, onHistory }) {
       </span>
       <span className="a-who">
         <span className="nm">
-          <span className="a-ref">{handle(a)}</span>
-          {describe(a)}
+          {/* whoever holds it is the headline -- a serial only means
+           * something once you already know which device it is */}
+          {open ? (
+            <>
+              <span className="avatar">{nameInitials(a.holder)}</span>
+              {a.holder || a.holder_email}
+            </>
+          ) : describe(a)}
           <span className={'chip ' + statusClass(a.status)}>{STATUS_LABEL[a.status]}</span>
           <span className={'chip a-' + a.ownership}>{OWNERSHIP_LABEL[a.ownership]}</span>
         </span>
         <span className="sub">
-          {a.category_label}
+          <span className="a-ref">{handle(a)}</span>
+          {' · ' + (open ? describe(a) : a.category_label)}
           {a.serial ? ' · ' + a.serial : ''}
           {a.location ? ' · ' + a.location : ''}
-          {open ? <> · <span className="avatar">{nameInitials(a.holder)}</span>
-                      {a.holder || a.holder_email} since {pretty(a.assigned_on)}</> : ''}
+          {open ? ' · held since ' + pretty(a.assigned_on) : ''}
+          {inTrash && a.delete_reason ? ' · ' + a.delete_reason : ''}
           {clock ? <> · {clock}</> : ''}
         </span>
       </span>
       <span className="a-acts">
-        <span className="mini" onClick={e => { e.stopPropagation(); onEdit(); }}>Edit</span>
-        {open
-          ? <>
-              <span className="mini" onClick={e => { e.stopPropagation(); onReturn(); }}>
-                {a.ownership === 'personal' ? 'Remove access' : 'Return'}
-              </span>
-              {a.ownership !== 'personal' &&
-                <span className="mini" onClick={e => { e.stopPropagation(); onReplace(); }}>Replace</span>}
-              <span className="mini" onClick={e => { e.stopPropagation(); onSend(); }}>Email</span>
-            </>
-          : gone ? null
-          : <span className="mini" onClick={e => { e.stopPropagation(); onAssign(); }}>Assign</span>}
+        {inTrash ? (
+          <span className="mini" onClick={e => { e.stopPropagation(); onRestore(); }}>Restore</span>
+        ) : (
+          <>
+            <span className="mini" onClick={e => { e.stopPropagation(); onEdit(); }}>Edit</span>
+            {open ? (
+              <>
+                <span className="mini" onClick={e => { e.stopPropagation(); onReturn(); }}>
+                  {a.ownership === 'personal' ? 'Remove access' : 'Return'}
+                </span>
+                {a.ownership !== 'personal' &&
+                  <span className="mini" onClick={e => { e.stopPropagation(); onReplace(); }}>Replace</span>}
+                <span className="mini" onClick={e => { e.stopPropagation(); onSend(); }}>Email</span>
+              </>
+            ) : (
+              <>
+                {!gone && <span className="mini" onClick={e => { e.stopPropagation(); onAssign(); }}>Assign</span>}
+                {a.ownership !== 'personal' &&
+                  <span className="mini" onClick={e => { e.stopPropagation(); onSetStatus(); }}>Status</span>}
+                <span className="mini" onClick={e => { e.stopPropagation(); onDelete(); }}>Delete</span>
+              </>
+            )}
+          </>
+        )}
       </span>
     </button>
   );
@@ -1008,6 +1074,126 @@ function SendEmail({ asset, me, onClose, onSaved }) {
             </button>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------- delete
+ * Never actually gone -- moves to Trash, same as removing an employee
+ * record moves them out of the directory rather than destroying anything.
+ * Blocked by a database trigger while the asset is assigned, so this
+ * button only ever appears on something already unassigned; nothing to
+ * enforce here that the database does not already refuse on its own. */
+function DeleteAsset({ asset, me, onClose, onSaved }) {
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const firstRef = useRef(null);
+  usePanelKeys(onClose, firstRef);
+
+  async function save() {
+    if (!reason.trim()) {
+      setErr('Say why — the record keeps this alongside who did it.');
+      return;
+    }
+    setBusy(true); setErr('');
+    const { error } = await supabase.from('assets').update({
+      deleted_at: new Date().toISOString(), deleted_by: me,
+      delete_reason: reason.trim(), updated_by: me
+    }).eq('id', asset.id);
+    setBusy(false);
+    if (error) { setErr(error.message); return; }
+    onSaved();
+  }
+
+  return (
+    <div className="veil" onClick={onClose}>
+      <div className="panel" onClick={e => e.stopPropagation()}>
+        <div className="ph">
+          <div>
+            <h2 style={{ fontSize: 17, fontWeight: 600 }}>Delete {handle(asset)}</h2>
+            <p className="note-txt" style={{ marginTop: 5 }}>{describe(asset)}</p>
+          </div>
+          <button className="x" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="headline" style={{ margin: '16px 0' }}>
+          <p>This moves it to Trash, not gone for good — it stays there until someone
+            restores it, and the reason travels with it.</p>
+        </div>
+
+        {err && <div className="err" style={{ marginBottom: 14 }}>{err}</div>}
+
+        <div className="frow">
+          <div style={{ flex: '1 1 100%' }}>
+            <label>Reason <span className="req">*</span></label>
+            <textarea ref={firstRef} rows={2} value={reason}
+              onChange={e => setReason(e.target.value)}
+              placeholder="e.g. duplicate entry, added by mistake" />
+          </div>
+        </div>
+
+        <button className="btn" disabled={busy} onClick={save} style={{ width: '100%' }}>
+          {busy ? 'Moving…' : 'Move to trash'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------- set status
+ * For anything not currently assigned. An assigned asset changes status
+ * only through Return or Replace, where the change carries evidence with
+ * it -- this is for the plain cases: something sitting in stock needs
+ * repair, or turns out to be missing, with nobody to return it from. */
+function SetStatus({ asset, me, onClose, onSaved }) {
+  const options = asset.ownership === 'leasing'
+    ? [['in_stock', 'In stock'], ['repair', 'Repair'], ['missing', 'Missing'],
+       ['returned_to_lessor', 'Returned to lessor']]
+    : [['in_stock', 'In stock'], ['repair', 'Repair'], ['missing', 'Missing'],
+       ['retired', 'Retired']];
+  const [status, setStatusVal] = useState(
+    options.some(([v]) => v === asset.status) ? asset.status : options[0][0]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const firstRef = useRef(null);
+  usePanelKeys(onClose, firstRef);
+
+  async function save() {
+    setBusy(true); setErr('');
+    const { error } = await supabase.from('assets')
+      .update({ status, updated_by: me }).eq('id', asset.id);
+    setBusy(false);
+    if (error) { setErr(error.message); return; }
+    onSaved();
+  }
+
+  return (
+    <div className="veil" onClick={onClose}>
+      <div className="panel" onClick={e => e.stopPropagation()}>
+        <div className="ph">
+          <div>
+            <h2 style={{ fontSize: 17, fontWeight: 600 }}>Status — {handle(asset)}</h2>
+            <p className="note-txt" style={{ marginTop: 5 }}>{describe(asset)}</p>
+          </div>
+          <button className="x" onClick={onClose}>✕</button>
+        </div>
+
+        {err && <div className="err" style={{ marginTop: 16 }}>{err}</div>}
+
+        <div className="frow" style={{ marginTop: 18 }}>
+          <div style={{ flex: '1 1 100%' }}>
+            <label>New status</label>
+            <select ref={firstRef} value={status} onChange={e => setStatusVal(e.target.value)}>
+              {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <button className="btn" disabled={busy} onClick={save} style={{ width: '100%' }}>
+          {busy ? 'Saving…' : 'Update status'}
+        </button>
       </div>
     </div>
   );
