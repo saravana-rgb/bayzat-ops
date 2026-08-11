@@ -19,37 +19,6 @@ function LaneIcon({ kind }) {
   );
 }
 
-/* One glance at how today is made up -- built from the exact same three
- * counts already driving the lanes underneath it. Nothing new fetched or
- * computed here, only rendered differently. */
-function CompositionStrip({ leaving, joining, expiring }) {
-  const total = leaving + joining + expiring;
-  if (total === 0) return null;
-  const segs = [
-    { n: leaving, color: 'var(--rose)', label: 'Leaving' },
-    { n: joining, color: 'var(--s4)', label: 'Joining' },
-    { n: expiring, color: 'var(--amber)', label: 'Expiring' }
-  ].filter(s => s.n > 0);
-  return (
-    <>
-      <div className="compstrip">
-        {segs.map(s => (
-          <span key={s.label} className="compseg"
-            style={{ flexGrow: s.n, background: s.color }} />
-        ))}
-      </div>
-      <div className="complegend">
-        {segs.map(s => (
-          <span key={s.label} className="compitem">
-            <span className="compdot" style={{ background: s.color }} />
-            {s.n} {s.label.toLowerCase()}
-          </span>
-        ))}
-      </div>
-    </>
-  );
-}
-
 /** One kind of work. Empty lanes still show, so the shape of the day is the
  *  same every morning and a glance tells you which side is busy. */
 function Lane({ kind, title, icon, blurb, items, href }) {
@@ -197,17 +166,37 @@ function Shell() {
           Sign out</button></>}
       />
 
-      <div className="hello">
-        <div>
-          <h2>{greeting()}{name ? ', ' + name.charAt(0).toUpperCase() + name.slice(1) : ''}</h2>
-          <p>
+      <div className="hero">
+        <svg className="hero-pattern" width="100%" height="100%" aria-hidden="true">
+          <defs>
+            <pattern id="heroDots" width="22" height="22" patternUnits="userSpaceOnUse">
+              <circle cx="2" cy="2" r="1.4" style={{ fill: 'var(--accent)' }} opacity="0.12" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#heroDots)" />
+        </svg>
+        <div className="hero-inner">
+          <p className="hero-eyebrow">Bayzat Ops</p>
+          <h1 className="hero-title">
+            {greeting()}
+            {name ? <span className="hero-name">, {name.charAt(0).toUpperCase() + name.slice(1)}</span> : ''}
+          </h1>
+          <p className="hero-sub">
             {!d ? 'Checking what needs you…'
               : total === 0
                 ? 'Nothing is waiting on you — every joiner, leaver and licence is up to date.'
                 : `${total} thing${total > 1 ? 's need' : ' needs'} your attention.`}
           </p>
-          {d && <CompositionStrip leaving={leaving.length} joining={joining.length}
-            expiring={expiring.length} />}
+          {d && total > 0 && (
+            <div className="hero-numbers">
+              {leaving.length > 0 && <div className="hero-num rose">
+                <b>{leaving.length}</b><span>Leaving</span></div>}
+              {joining.length > 0 && <div className="hero-num olive">
+                <b>{joining.length}</b><span>Joining</span></div>}
+              {expiring.length > 0 && <div className="hero-num amber">
+                <b>{expiring.length}</b><span>Expiring</span></div>}
+            </div>
+          )}
         </div>
       </div>
 
@@ -225,6 +214,10 @@ function Shell() {
         </div>
       )}
 
+      <div className="section-head">
+        <h3>Everything you can do</h3>
+        <span>{visible.length} tiles</span>
+      </div>
       <div className="tiles">
         {visible.map(t => {
           // a plain `length && text` returns 0 when the count is zero, and
