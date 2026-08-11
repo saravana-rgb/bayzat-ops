@@ -6,7 +6,7 @@ import { supabase } from '../../common/shared';
 /* Nobody reaching this page is logged into anything -- it exists
  * specifically for someone who is not a Bayzat Ops user at all. No
  * AuthGate, no Bar, no navigation back into the tool. Styled inline on
- * purpose, so this page has no dependency on any tile's own stylesheet
+ * purpose, so this page has no dependency on any tile's own styleshee
  * and cannot be affected by changes made there. */
 
 export default function AcknowledgePage() {
