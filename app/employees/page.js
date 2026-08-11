@@ -7,6 +7,15 @@ import Reports from './reports';
 
 const PER_PAGE = 25;
 
+/* Correct plurals for the facet "All ..." option -- a plain {k}s suffix
+ * used to run here, which is why "entity" read as "All entitys". */
+const FACET_LABEL = {
+  department: 'departments',
+  entity: 'entities',
+  location: 'locations',
+  leasing_company: 'leasing companies'
+};
+
 export default function EmployeesPage() {
   return <AuthGate><Shell /></AuthGate>;
 }
@@ -106,7 +115,8 @@ function Directory({ email }) {
     const pick = k => [...new Set(withMissing.map(e => (e[k] || '').trim()).filter(Boolean))].sort();
     return { department: pick('department'), entity: pick('entity'),
              location: pick('location'), office: pick('office'),
-             nationality: pick('nationality'), gender: pick('gender') };
+             nationality: pick('nationality'), gender: pick('gender'),
+             leasing_company: pick('leasing_company') };
   }, [withMissing]);
 
   if (!rows) return <p className="note-txt">Loading the directory…</p>;
@@ -127,7 +137,7 @@ function Directory({ email }) {
     if (gapFilter === '3' && m < 3)   return false;
     if (!term) return true;
     return [e.first_name, e.last_name, e.preferred_name, e.work_email, e.employee_id,
-            e.title, e.department, e.reports_to, e.asset_serial]
+            e.title, e.department, e.reports_to, e.asset_serial, e.leasing_company]
       .some(v => (v || '').toLowerCase().includes(term));
   });
 
@@ -140,7 +150,7 @@ function Directory({ email }) {
     const cols = ['employee_id','first_name','last_name','preferred_name','work_email',
                   'personal_email','mobile_no','work_no','title','department','reports_to',
                   'entity','location','office','hiring_date','nationality','gender',
-                  'asset_type','asset_serial','asset_note','status','onboarding_ref'];
+                  'asset_type','asset_serial','leasing_company','asset_note','status','onboarding_ref'];
     const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
     const lines = [cols.concat(['missing_fields']).map(q).join(',')];
     rowsToWrite.forEach(e => lines.push(
@@ -196,12 +206,12 @@ function Directory({ email }) {
       </div>
 
       <div className="facets">
-        {['department', 'entity', 'location'].map(k => (
+        {['department', 'entity', 'location', 'leasing_company'].map(k => (
           <select key={k} className="facetsel"
             value={facet.key === k ? facet.value : ''}
             onChange={e => setFacet(e.target.value ? { key: k, value: e.target.value }
                                                    : { key: '', value: '' })}>
-            <option value="">All {k}s</option>
+            <option value="">All {FACET_LABEL[k]}</option>
             {facets[k].map(v => <option key={v} value={v}>{v}</option>)}
           </select>
         ))}
@@ -377,7 +387,17 @@ function Drawer({ e, facets, onClose, onSave, onDelete, onRestore }) {
   const missing = missingOf(form);
   const dirty = Object.keys(form).some(k => form[k] !== e[k]);
 
-  function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
+  function set(k, v) {
+    setForm(f => {
+      const next = { ...f, [k]: v };
+      /* the leasing company only means something while the device type is
+       * leasing -- switch away and the old value would otherwise sit there
+       * unseen, since the field stops rendering but the data does not
+       * clear itself */
+      if (k === 'asset_type' && v !== 'leasing') next.leasing_company = '';
+      return next;
+    });
+  }
 
   async function submit() {
     setBusy(true);
@@ -417,10 +437,12 @@ function Drawer({ e, facets, onClose, onSave, onDelete, onRestore }) {
             <div className="sec">{g.name}</div>
             <div className="fgrid">
               {g.fields.map(f => {
-                const empty = f.req && !String(form[f.k] ?? '').trim();
+                if (f.showIf && !f.showIf(form)) return null;
+                const required = f.req || (f.reqIf && f.reqIf(form));
+                const empty = required && !String(form[f.k] ?? '').trim();
                 return (
                   <div key={f.k} className={'field' + (f.wide ? ' wide' : '')}>
-                    <label>{f.l}{f.req && <i className="req" title="Required">*</i>}</label>
+                    <label>{f.l}{required && <i className="req" title="Required">*</i>}</label>
                     {f.type === 'select'
                       ? <select className={empty ? 'gap' : ''} value={form[f.k] || ''}
                           onChange={ev => set(f.k, ev.target.value)}>
