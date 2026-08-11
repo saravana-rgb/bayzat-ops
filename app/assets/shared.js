@@ -1,26 +1,20 @@
 'use client';
+/* What an asset looks like, and the small pieces every part of this tile
+   needs. The client, the sign-in gate and the top bar are not redefined
+   here — they come from common/shared like every other tile uses. */
 
-import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
-import { S, C, STATUS_COLOUR } from './styles';
-
-/* If common/shared.js already exports a configured client, replace these two
-   lines with an import of it. These are the standard Vercel/Supabase names. */
-export const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
-
-export const PATH = '/assets';
+export { AuthGate, Bar, supabase } from '../common/shared';
 
 /* ---------------------------------------------------------- vocabulary
-   Kept in one place and mirrored from the check constraints. If these drift
-   from the database the insert fails loudly, which is the right way round. */
+   Matches ASSET_TYPES in employees/shared.js exactly, on purpose — the
+   write-back copies this value straight into employees.asset_type, so if
+   the two ever say different things the sync is broken by definition. */
 export const OWNERSHIP = [
-  { value: 'bayzat', label: 'Bayzat owned' },
-  { value: 'leased', label: 'Leased' },
-  { value: 'byod',   label: 'Employee owned' }
+  ['bayzat',   'Bayzat owned'],
+  ['leasing',  'Leased'],
+  ['personal', 'Personal device']
 ];
+export const OWNERSHIP_LABEL = Object.fromEntries(OWNERSHIP);
 
 export const STATUS_LABEL = {
   in_stock          : 'In stock',
@@ -32,159 +26,61 @@ export const STATUS_LABEL = {
   missing           : 'Missing'
 };
 
-/* Which endings exist depends on who owns the thing. The database enforces
-   this too — this list only stops us offering an impossible one. */
+/* Which closures exist depends on who owns the thing — a personal device
+   cannot be collected, and a leased one is never retired. The database
+   enforces this too; this list only stops the form offering the impossible
+   one. */
 export const CLOSURES = {
   bayzat: [
-    { value: 'collected',   label: 'Collected', needsCondition: true },
-    { value: 'reassigned',  label: 'Passed to someone else', needsCondition: true },
-    { value: 'written_off', label: 'Written off' },
-    { value: 'missing',     label: 'Not returned' }
+    ['collected',   'Collected',              true],
+    ['reassigned',  'Passed to someone else', true],
+    ['written_off', 'Written off',            false],
+    ['missing',     'Not returned',           false]
   ],
-  leased: [
-    { value: 'collected',          label: 'Collected', needsCondition: true },
-    { value: 'returned_to_lessor', label: 'Returned to lessor' },
-    { value: 'missing',            label: 'Not returned' }
+  leasing: [
+    ['collected',          'Collected', true],
+    ['returned_to_lessor', 'Returned to lessor', false],
+    ['missing',            'Not returned', false]
   ],
-  byod: [
-    { value: 'access_removed', label: 'Access removed' },
-    { value: 'missing',        label: 'Unresolved' }
+  personal: [
+    ['access_removed', 'Access removed', false],
+    ['missing',        'Unresolved',     false]
   ]
 };
 
-export function ownershipLabel(v) {
-  const found = OWNERSHIP.find(function (o) { return o.value === v; });
-  return found ? found.label : v;
+/* Status maps down to one of six left-rule / chip colours. returned_to_lessor
+   and released both read as "gone, and not ours to take back". */
+export function statusClass(status) {
+  if (status === 'in_stock') return 'st-instock';
+  if (status === 'assigned') return 'st-assigned';
+  if (status === 'repair')   return 'st-repair';
+  if (status === 'missing')  return 'st-missing';
+  if (status === 'retired')  return 'st-retired';
+  return 'st-gone';   // returned_to_lessor, released
 }
 
-/* ------------------------------------------------------------- helpers */
-
-/* toISOString is UTC, which reads as yesterday for the first four hours of a
-   Dubai day. Dates are built from local parts, always. */
+/* Today in the browser's own timezone. toISOString() is UTC, which reads
+ * as yesterday for the first four hours of a Dubai day. */
 export function today() {
   const d = new Date();
-  const p = function (n) { return String(n).padStart(2, '0'); };
+  const p = (n) => String(n).padStart(2, '0');
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export const pretty = (iso) => iso
+  ? new Date(iso + 'T00:00:00').toLocaleDateString('en-GB',
+      { day: 'numeric', month: 'short', year: 'numeric' })
+  : '—';
 
-export function pretty(iso) {
-  if (!iso) return '—';
-  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!m) return String(iso);
-  return Number(m[3]) + ' ' + MONTHS[Number(m[2]) - 1] + ' ' + m[1];
-}
+export const describe = (a) => [a.make, a.model].filter(Boolean).join(' ')
+  || a.category_label || 'Asset';
 
-export function describe(a) {
-  const bits = [a.make, a.model].filter(Boolean).join(' ');
-  return bits || a.category_label || 'Asset';
-}
+export const handle = (a) => a.tag || a.serial || (a.id ? a.id.slice(0, 8) : '—');
 
-export function handle(a) {
-  return a.tag || a.serial || (a.id ? a.id.slice(0, 8) : '—');
-}
+/* Same construction as fullName() in employees/shared.js, kept local so
+ * this tile does not reach into another tile's file. */
+export const fullName = (e) =>
+  [e.preferred_name || e.first_name, e.last_name].filter(Boolean).join(' ').trim();
 
-/* ---------------------------------------------------------- components */
-
-export function Pill({ children, tone, subtle }) {
-  const colour = tone || C.steel;
-  return (
-    <span style={subtle ? { ...S.pillSubtle, color: colour, borderColor: colour }
-                        : { ...S.pill, background: colour }}>
-      {children}
-    </span>
-  );
-}
-
-export function StatusPill({ status }) {
-  return <Pill tone={STATUS_COLOUR[status] || C.steel}>
-    {STATUS_LABEL[status] || status}
-  </Pill>;
-}
-
-export function Count({ label, value, tone, active, onClick }) {
-  return (
-    <button onClick={onClick}
-            style={{ ...S.count, borderColor: active ? tone : C.rule,
-                     background: active ? '#FFFFFF' : 'transparent' }}>
-      <span style={{ ...S.countNum, color: tone }}>{value}</span>
-      <span style={S.countLabel}>{label}</span>
-    </button>
-  );
-}
-
-export function Field({ label, hint, children }) {
-  return (
-    <label style={S.field}>
-      <span style={S.fieldLabel}>{label}</span>
-      {children}
-      {hint ? <span style={S.fieldHint}>{hint}</span> : null}
-    </label>
-  );
-}
-
-export function Panel({ title, sub, onClose, children, wide }) {
-  return (
-    <div style={S.scrim} onClick={onClose}>
-      <div style={wide ? { ...S.panel, maxWidth: 760 } : S.panel}
-           onClick={function (e) { e.stopPropagation(); }}>
-        <div style={S.panelHead}>
-          <div>
-            <div style={S.panelTitle}>{title}</div>
-            {sub ? <div style={S.panelSub}>{sub}</div> : null}
-          </div>
-          <button style={S.close} onClick={onClose}>Close</button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-export function Empty({ children }) {
-  return <div style={S.empty}>{children}</div>;
-}
-
-/* -------------------------------------------------------------- auth
-   Same rule as the rest of the app: a signed-in @bayzat.com address. */
-export function AuthGate({ children }) {
-  const [state, setState] = useState('checking');
-  const [email, setEmail] = useState('');
-
-  useEffect(function () {
-    let live = true;
-    supabase.auth.getSession().then(function ({ data }) {
-      if (!live) return;
-      const who = data && data.session && data.session.user
-        ? data.session.user.email : '';
-      setEmail(who || '');
-      setState(who && /@bayzat\.com$/i.test(who) ? 'in' : 'out');
-    });
-    const sub = supabase.auth.onAuthStateChange(function (_e, session) {
-      const who = session && session.user ? session.user.email : '';
-      setEmail(who || '');
-      setState(who && /@bayzat\.com$/i.test(who) ? 'in' : 'out');
-    });
-    return function () {
-      live = false;
-      if (sub && sub.data && sub.data.subscription) sub.data.subscription.unsubscribe();
-    };
-  }, []);
-
-  if (state === 'checking') return <div style={S.gate}>Checking…</div>;
-  if (state === 'out') {
-    return (
-      <div style={S.gate}>
-        <div style={S.gateTitle}>Not signed in</div>
-        <div style={S.gateBody}>
-          {email
-            ? email + ' is not a Bayzat address.'
-            : 'Sign in with your Bayzat account to see the asset register.'}
-        </div>
-      </div>
-    );
-  }
-  return <>{children}</>;
-}
+export const initials = (e) =>
+  (((e.first_name || '?')[0] || '') + ((e.last_name || '')[0] || '')).toUpperCase();
