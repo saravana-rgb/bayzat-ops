@@ -14,16 +14,46 @@ export const homeCss = `
 .lane{transition:border-color .18s var(--ease)}
 .lane:hover{border-color:var(--ink3)}
 
-/* the composition strip -- a one-glance read of how today is made up,
- * directly under the greeting. Built from the same three counts already
- * driving the lanes below it; nothing new is fetched for this. */
-.compstrip{display:flex;gap:3px;height:6px;border-radius:4px;overflow:hidden;
-  margin-top:16px;max-width:360px}
-.compseg{transition:flex-grow .3s var(--ease)}
-.complegend{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px}
-.compitem{display:flex;align-items:center;gap:7px;font:400 12.5px var(--font);
-  color:var(--ink2)}
-.compdot{width:8px;height:8px;border-radius:50%;flex:none}
+/* a hero band that breaks out to the full width of the browser, not just
+ * .wrap's own constrained column. The technique: give it the viewport's
+ * full width, then pull it back into position with a negative margin
+ * calculated from that same viewport width. This works regardless of what
+ * .wrap's own max-width or padding happen to be -- it never needs to know.
+ * The one common side effect of this trick is a possible 1px horizontal
+ * scrollbar on some browsers; overflow-x:hidden on .wrap guards against
+ * it, scoped to this page only since this rule only exists while Home's
+ * own stylesheet is loaded. */
+.wrap{overflow-x:hidden}
+.hero{position:relative;width:100vw;left:50%;right:50%;margin-left:-50vw;margin-right:-50vw;
+  background:var(--sunk);border-bottom:1px solid var(--line);overflow:hidden;
+  padding:46px 0 40px;margin-bottom:34px}
+.hero-pattern{position:absolute;inset:0;pointer-events:none}
+.hero-inner{max-width:1000px;margin:0 auto;padding:0 24px;position:relative}
+.hero-eyebrow{font:600 11.5px var(--font);letter-spacing:.6px;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px}
+.hero-title{font-size:42px;font-weight:600;letter-spacing:-1.2px;color:var(--ink);
+  line-height:1.08;margin:0}
+.hero-name{color:var(--accent)}
+.hero-sub{font-size:15px;color:var(--ink2);margin-top:12px;max-width:520px;line-height:1.6}
+.hero-numbers{display:flex;gap:34px;flex-wrap:wrap;margin-top:30px}
+.hero-num{display:flex;flex-direction:column}
+.hero-num b{font-size:40px;font-weight:600;letter-spacing:-1.4px;line-height:1}
+.hero-num span{font-size:12.5px;color:var(--ink3);margin-top:6px;font-weight:500}
+.hero-num.rose b{color:var(--rose)}
+.hero-num.olive b{color:var(--s4)}
+.hero-num.amber b{color:var(--amber)}
+
+/* a small heading gives the tile grid its own second act, rather than
+ * letting the hero trail straight into a wall of cards */
+.section-head{display:flex;align-items:baseline;gap:10px;margin:0 0 16px}
+.section-head h3{font-size:15px;font-weight:600;color:var(--ink);margin:0}
+.section-head span{font-size:12.5px;color:var(--ink3)}
+
+@media(max-width:640px){
+  .hero{padding:34px 0 30px}
+  .hero-title{font-size:30px}
+  .hero-num b{font-size:32px}
+}
 
 /* small inline icons standing in for the plain arrow characters the
  * lanes used before -- same stroke language as every other icon in the
