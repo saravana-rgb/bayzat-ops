@@ -8,7 +8,12 @@ export const homeCss = `
 /* a little life on hover, matching the polish already given to the
  * Assets tile -- the numbers on this page are a dashboard, they should
  * feel like one */
-.tile{transition:transform .15s var(--ease), border-color .18s var(--ease)}
+.tile{transition:transform .15s var(--ease), border-color .18s var(--ease);
+  animation:revealUp .45s var(--ease) both}
+.tile:nth-child(1){animation-delay:.30s} .tile:nth-child(2){animation-delay:.34s}
+.tile:nth-child(3){animation-delay:.38s} .tile:nth-child(4){animation-delay:.42s}
+.tile:nth-child(5){animation-delay:.46s} .tile:nth-child(6){animation-delay:.50s}
+.tile:nth-child(7){animation-delay:.54s}
 .tile:hover{transform:translateY(-3px)}
 .tile:hover .ico{transform:scale(1.08)}
 
@@ -23,8 +28,27 @@ export const homeCss = `
  * own stylesheet is loaded. */
 .wrap{overflow-x:hidden}
 .hero{position:relative;width:100vw;left:50%;right:50%;margin-left:-50vw;margin-right:-50vw;
-  background:var(--sunk);border-bottom:1px solid var(--line);overflow:hidden;
-  padding:46px 0 40px;margin-bottom:34px}
+  border-bottom:1px solid var(--line);overflow:hidden;padding:46px 0 40px;margin-bottom:34px;
+  background:linear-gradient(120deg,var(--accent-soft) 0%,var(--amber-soft) 45%,var(--s4-soft) 100%);
+  background-size:220% 220%;
+  animation:heroGradient 16s ease infinite}
+@keyframes heroGradient{
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+@keyframes revealUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.reveal{animation:revealUp .55s var(--ease) both}
+.reveal.r1{animation-delay:.02s}
+.reveal.r2{animation-delay:.09s}
+.reveal.r3{animation-delay:.17s}
+.reveal.r4{animation-delay:.26s}
+@media(prefers-reduced-motion:reduce){
+  .hero{animation:none}
+  .reveal{animation:none}
+  .board-lane{animation:none}
+  .tile{animation:none}
+}
 .hero-pattern{position:absolute;inset:0;pointer-events:none}
 .hero-inner{max-width:1000px;margin:0 auto;padding:0 24px;position:relative}
 .hero-eyebrow{font:600 11.5px var(--font);letter-spacing:.6px;text-transform:uppercase;
@@ -35,6 +59,17 @@ export const homeCss = `
 .hero-row{display:flex;align-items:center;gap:14px}
 .hero-sub{font-size:15px;color:var(--ink2);margin-top:12px;max-width:520px;line-height:1.6}
 
+.hero-cta{display:inline-block;margin-top:18px;font:600 13px var(--font);color:#fff;
+  background:var(--accent);padding:10px 20px;border-radius:999px;text-decoration:none;
+  transition:transform .15s var(--ease),filter .15s var(--ease)}
+.hero-cta:hover{transform:translateY(-2px);filter:brightness(1.06)}
+
+.hero-stats{display:flex;gap:30px;margin-top:24px}
+.hstat{display:flex;flex-direction:column}
+.hstat b{font-size:26px;font-weight:600;color:var(--ink);letter-spacing:-.6px;line-height:1}
+.hstat span{font-size:11px;color:var(--ink3);margin-top:5px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.4px}
+
 /* the board -- one card per lane, and only one. The header carries the
  * icon, the title and a live count; the body carries every item that
  * lane has, two shown and the rest revealed in place by the toggle at
@@ -43,7 +78,10 @@ export const homeCss = `
   max-width:1000px;margin:0 auto 34px;padding:0 24px}
 .board-lane{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
   border-top:3px solid var(--line);overflow:hidden;transition:border-color .18s var(--ease),
-  transform .15s var(--ease)}
+  transform .15s var(--ease);animation:revealUp .5s var(--ease) both}
+.board-lane:nth-child(1){animation-delay:.30s}
+.board-lane:nth-child(2){animation-delay:.36s}
+.board-lane:nth-child(3){animation-delay:.42s}
 .board-lane:hover{border-color:var(--ink3);transform:translateY(-2px)}
 .board-lane.rose{border-top-color:var(--rose)}
 .board-lane.olive{border-top-color:var(--s4)}
