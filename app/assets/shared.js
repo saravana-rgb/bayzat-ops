@@ -126,6 +126,26 @@ export function CategoryIcon({ slug, size = 18 }) {
   );
 }
 
+export const ACTION_ICON = {
+  edit:    'M3 21l4-1 12-12-3-3L4 17z M16 3l3 3',
+  replace: 'M3 7h13l-3-3 M16 7l-3 3 M21 17H8l3 3 M8 17l3-3',
+  email:   'M3 5h18v14H3z M3 5l9 7 9-7',
+  status:  'M5 3v18 M5 4h13l-3 4 3 4H5z',
+  delete:  'M4 7h16 M10 11v6 M14 11v6 M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12 M9 7V4h6v3',
+  restore: 'M4 12l5 5L20 6'
+};
+
+export function ActionIcon({ name, size = 15 }) {
+  const d = ACTION_ICON[name];
+  if (!d) return null;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {d.split(' M').map((seg, i) => <path key={i} d={(i ? 'M' : '') + seg} />)}
+    </svg>
+  );
+}
+
 /* Every category gets a distinct, named palette colour -- no new hex,
  * every one of these already exists as a CSS variable everywhere else in
  * the app. Cycled across nine categories with six hues, same way the
