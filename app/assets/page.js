@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AuthGate, Bar, supabase, OWNERSHIP, OWNERSHIP_LABEL, STATUS_LABEL,
          CLOSURES, statusClass, today, pretty, describe, handle, fullName,
-         usePanelKeys, CategoryIcon, categoryTone, nameInitials }
+         usePanelKeys, CategoryIcon, ActionIcon, categoryTone, nameInitials }
   from './shared';
 
 const PER_PAGE = 40;
@@ -104,6 +104,20 @@ function Register({ assets, cats, me, onReload }) {
     saved('Restored.');
   }
 
+  function exportCsv(rows) {
+    const cols = ['tag', 'serial', 'category_label', 'make', 'model', 'ownership', 'status',
+                  'location', 'holder', 'holder_email', 'assigned_on', 'warranty_until'];
+    const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+    const lines = [cols.map(q).join(',')];
+    rows.forEach(a => lines.push(cols.map(c => q(a[c])).join(',')));
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'assets-' + new Date().toISOString().slice(0, 10) + '.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
   /* trash is a separate world from everything else -- a deleted asset is
    * never mixed into the live counts, the tabs, or the search, the same
    * way a removed employee record disappears from every count elsewhere
@@ -163,8 +177,10 @@ function Register({ assets, cats, me, onReload }) {
           <option value="">Any owner</option>
           {OWNERSHIP.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
-        <button className="btn" style={{ marginLeft: 'auto' }}
-          onClick={() => setAdding(true)}>Add an asset</button>
+        <button className="mini" style={{ marginLeft: 'auto' }} onClick={() => exportCsv(shown)}>
+          Export this view
+        </button>
+        <button className="btn" onClick={() => setAdding(true)}>Add an asset</button>
       </div>
 
       <div className="tabset" style={{ marginBottom: 18 }}>
@@ -343,30 +359,51 @@ function Row({ a, inTrash, onEdit, onAssign, onReturn, onReplace, onSend,
       </span>
       <span className="a-acts">
         {inTrash ? (
-          <span className="mini act-restore" onClick={e => { e.stopPropagation(); onRestore(); }}>Restore</span>
+          <button className="a-primary pri-restore" onClick={e => { e.stopPropagation(); onRestore(); }}>
+            Restore
+          </button>
         ) : (
           <>
-            <span className="mini act-edit" onClick={e => { e.stopPropagation(); onEdit(); }}>Edit</span>
             {open && (
-              <>
-                <span className="mini act-return" onClick={e => { e.stopPropagation(); onReturn(); }}>
-                  {a.ownership === 'personal' ? 'Remove access' : 'Return'}
-                </span>
-                {a.ownership !== 'personal' &&
-                  <span className="mini act-replace" onClick={e => { e.stopPropagation(); onReplace(); }}>Replace</span>}
-                <span className="mini act-email" onClick={e => { e.stopPropagation(); onSend(); }}>Email</span>
-              </>
+              <button className="a-primary pri-return"
+                onClick={e => { e.stopPropagation(); onReturn(); }}>
+                {a.ownership === 'personal' ? 'Remove access' : 'Return'}
+              </button>
             )}
-            {!open && !gone &&
-              <span className="mini act-assign" onClick={e => { e.stopPropagation(); onAssign(); }}>Assign</span>}
-            {/* Status works whether or not it is currently assigned -- a
-             * device can need repair while someone still has it, and there
-             * was previously no way to flag that without returning it
-             * first, which is not what "it needs repair" actually means. */}
-            {a.ownership !== 'personal' &&
-              <span className="mini act-status" onClick={e => { e.stopPropagation(); onSetStatus(); }}>Status</span>}
-            {!open &&
-              <span className="mini act-delete" onClick={e => { e.stopPropagation(); onDelete(); }}>Delete</span>}
+            {!open && !gone && (
+              <button className="a-primary pri-assign" onClick={e => { e.stopPropagation(); onAssign(); }}>
+                Assign
+              </button>
+            )}
+
+            <button className="a-icobtn ic-edit" title="Edit"
+              onClick={e => { e.stopPropagation(); onEdit(); }}>
+              <ActionIcon name="edit" />
+            </button>
+            {open && a.ownership !== 'personal' && (
+              <button className="a-icobtn ic-replace" title="Replace"
+                onClick={e => { e.stopPropagation(); onReplace(); }}>
+                <ActionIcon name="replace" />
+              </button>
+            )}
+            {open && (
+              <button className="a-icobtn ic-email" title="Send allocation email"
+                onClick={e => { e.stopPropagation(); onSend(); }}>
+                <ActionIcon name="email" />
+              </button>
+            )}
+            {a.ownership !== 'personal' && (
+              <button className="a-icobtn ic-status" title="Change status"
+                onClick={e => { e.stopPropagation(); onSetStatus(); }}>
+                <ActionIcon name="status" />
+              </button>
+            )}
+            {!open && (
+              <button className="a-icobtn ic-delete" title="Delete"
+                onClick={e => { e.stopPropagation(); onDelete(); }}>
+                <ActionIcon name="delete" />
+              </button>
+            )}
           </>
         )}
       </span>
