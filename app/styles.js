@@ -32,12 +32,8 @@ export const homeCss = `
 .hero-title{font-size:42px;font-weight:600;letter-spacing:-1.2px;color:var(--ink);
   line-height:1.08;margin:0}
 .hero-name{color:var(--accent)}
+.hero-row{display:flex;align-items:center;gap:14px}
 .hero-sub{font-size:15px;color:var(--ink2);margin-top:12px;max-width:520px;line-height:1.6}
-.hero-badge{display:inline-flex;align-items:center;gap:6px;margin-top:16px;
-  font:500 12.5px var(--font);color:var(--rose);background:var(--rose-soft);
-  padding:6px 14px;border-radius:999px;text-decoration:none;
-  transition:transform .12s var(--ease)}
-.hero-badge:hover{transform:translateY(-1px)}
 
 /* the board -- one card per lane, and only one. The header carries the
  * icon, the title and a live count; the body carries every item that
@@ -46,8 +42,9 @@ export const homeCss = `
 .board{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;
   max-width:1000px;margin:0 auto 34px;padding:0 24px}
 .board-lane{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
-  border-top:3px solid var(--line);overflow:hidden;transition:border-color .18s var(--ease)}
-.board-lane:hover{border-color:var(--ink3)}
+  border-top:3px solid var(--line);overflow:hidden;transition:border-color .18s var(--ease),
+  transform .15s var(--ease)}
+.board-lane:hover{border-color:var(--ink3);transform:translateY(-2px)}
 .board-lane.rose{border-top-color:var(--rose)}
 .board-lane.olive{border-top-color:var(--s4)}
 .board-lane.amber{border-top-color:var(--amber)}
@@ -55,7 +52,9 @@ export const homeCss = `
 .board-head{display:flex;align-items:center;gap:12px;padding:16px 18px;text-decoration:none;
   border-bottom:1px solid var(--line2)}
 .board-head:hover{background:var(--sunk)}
-.board-ico{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;flex:none}
+.board-ico{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;flex:none;
+  transition:transform .15s var(--ease)}
+.board-head:hover .board-ico{transform:scale(1.08)}
 .board-ico svg{display:block}
 .board-lane.rose .board-ico{background:var(--rose-soft);color:var(--rose)}
 .board-lane.olive .board-ico{background:var(--s4-soft);color:var(--s4)}
