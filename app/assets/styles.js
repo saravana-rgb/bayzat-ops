@@ -135,18 +135,26 @@ export const assetsCss = `
 .donut-dot{width:10px;height:10px;border-radius:50%;flex:none}
 .donut-n{margin-left:auto;font:600 13px var(--font);color:var(--ink)}
 
-/* one colour per action, filled with the same soft-tint technique the
- * chips already use elsewhere in this app -- not just a coloured outline,
- * a real background so the row reads as colour at a glance */
-.mini.act-edit   {background:var(--s4-soft);border-color:transparent;color:var(--s4)}
-.mini.act-assign {background:var(--s1-soft);border-color:transparent;color:var(--s1)}
-.mini.act-return {background:var(--accent-soft);border-color:transparent;color:var(--accent)}
-.mini.act-replace{background:var(--s3-soft);border-color:transparent;color:var(--s3)}
-.mini.act-email  {background:var(--s6-soft);border-color:transparent;color:var(--s6)}
-.mini.act-status {background:var(--s5-soft);border-color:transparent;color:var(--s5)}
-.mini.act-delete {background:var(--rose-soft);border-color:transparent;color:var(--rose)}
-.mini.act-restore{background:var(--emerald-soft);border-color:transparent;color:var(--emerald)}
-.mini[class*="act-"]:hover{filter:brightness(0.94)}
+/* one clear primary action per row, filled solid -- everything else is a
+ * small round icon button, quiet until you hover it. Five equal-weight
+ * text pills read as a wall of options; one bold action plus a few small
+ * icons reads as designed. */
+.a-primary{font:600 12.5px var(--font);padding:8px 16px;border-radius:999px;
+  border:none;color:#fff;cursor:pointer;transition:filter .12s var(--ease),transform .12s var(--ease)}
+.a-primary:hover{filter:brightness(0.93);transform:translateY(-1px)}
+.a-primary.pri-return{background:var(--accent)}
+.a-primary.pri-assign{background:var(--s1)}
+.a-primary.pri-restore{background:var(--emerald)}
+
+.a-icobtn{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
+  border:none;background:transparent;cursor:pointer;flex:none;
+  transition:background .12s var(--ease),transform .12s var(--ease)}
+.a-icobtn:hover{transform:translateY(-1px)}
+.a-icobtn.ic-edit   {color:var(--s4)}    .a-icobtn.ic-edit:hover   {background:var(--s4-soft)}
+.a-icobtn.ic-replace{color:var(--s3)}    .a-icobtn.ic-replace:hover{background:var(--s3-soft)}
+.a-icobtn.ic-email  {color:var(--s6)}    .a-icobtn.ic-email:hover  {background:var(--s6-soft)}
+.a-icobtn.ic-status {color:var(--s5)}    .a-icobtn.ic-status:hover {background:var(--s5-soft)}
+.a-icobtn.ic-delete {color:var(--rose)}  .a-icobtn.ic-delete:hover {background:var(--rose-soft)}
 
 /* pagination -- not a global class, replicated from the same rules the
  * Employees tile already uses for its own Pager, since a tile's styles
