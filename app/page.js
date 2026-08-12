@@ -222,61 +222,41 @@ function Shell() {
       />
 
       <div className="hero">
-        <svg className="hero-pattern" width="100%" height="100%" aria-hidden="true">
-          <defs>
-            <pattern id="heroTexture" width="88" height="88" patternUnits="userSpaceOnUse">
-              <g opacity="0.13" style={{ color: 'var(--accent)' }} stroke="currentColor"
-                strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                <g transform="translate(6,8) scale(0.7)">
-                  <path d="M4 4h16v10H4z" /><path d="M2 18h20l-2-4H4z" />
-                </g>
-              </g>
-              <g opacity="0.11" style={{ color: 'var(--s1)' }} stroke="currentColor"
-                strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                <g transform="translate(52,10) scale(0.6)">
-                  <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" /><path d="M4 20a8 8 0 0 1 16 0" />
-                </g>
-              </g>
-              <g opacity="0.11" style={{ color: 'var(--s4)' }} stroke="currentColor"
-                strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                <g transform="translate(28,52) scale(0.6)">
-                  <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" />
-                </g>
-              </g>
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#heroTexture)" />
-        </svg>
         <div className="hero-inner">
-          <p className="hero-eyebrow reveal r1">Bayzat Ops</p>
-          <div className="hero-row reveal r2">
-            <TimeIcon />
-            <h1 className="hero-title">
-              {greeting()}
-              {name ? <span className="hero-name">, {name.charAt(0).toUpperCase() + name.slice(1)}</span> : ''}
-            </h1>
-          </div>
-          <p className="hero-sub reveal r3">
-            {!d ? 'Checking what needs you…'
-              : total === 0
-                ? 'Nothing is waiting on you — every joiner, leaver and licence is up to date.'
-                : `${total} thing${total > 1 ? 's need' : ' needs'} your attention.`}
-          </p>
+          <div className="hero-top">
+            <div className="hero-greet">
+              <TimeIcon />
+              <div>
+                <h1 className="hero-title">
+                  {greeting()}
+                  {name ? <span className="hero-name">, {name.charAt(0).toUpperCase() + name.slice(1)}</span> : ''}
+                </h1>
+                <p className="hero-sub">
+                  {!d ? 'Checking what needs you\u2026'
+                    : total === 0
+                      ? 'Nothing is waiting on you.'
+                      : `${total} thing${total > 1 ? 's need' : ' needs'} your attention.`}
+                </p>
+              </div>
+            </div>
 
-          {d && leaving.length > 0 && (
-            <a className="hero-cta reveal r3" href="/offboarding">Open the leaver checklist</a>
-          )}
-
-          {d && (
-            <div className="hero-stats reveal r4">
-              <div className="hstat"><b>{d.active.length}</b><span>People</span></div>
-              {d.deviceCount !== null && (
-                <div className="hstat"><b>{d.deviceCount}</b><span>Devices</span></div>
+            <div className="hero-right">
+              {d && leaving.length > 0 && (
+                <a className="hero-cta" href="/offboarding">Open the leaver checklist</a>
+              )}
+              {d && (
+                <div className="hero-stats">
+                  <div className="hstat"><b>{d.active.length}</b><span>People</span></div>
+                  {d.deviceCount !== null && (
+                    <div className="hstat"><b>{d.deviceCount}</b><span>Devices</span></div>
+                  )}
+                </div>
               )}
             </div>
-          )}
+          </div>
         </div>
       </div>
+
 
       {d && <OpsBoard leaving={leaving} joining={joining} expiring={expiring} />}
 
