@@ -129,12 +129,15 @@ function Shell() {
   const [d, setD] = useState(null);
 
   const load = useCallback(async () => {
-    const [pending, leavers, docs, emp] = await Promise.all([
+    const [pending, leavers, docs, emp, assetCount] = await Promise.all([
       supabase.from('v_pending_steps').select('ref,days_open,name,label'),
       supabase.from('leavers').select('id,ref,first_name,last_name,status,last_working_day'),
       supabase.from('company_documents').select('id,title,expiry_date,status'),
       supabase.from('employees').select('id,status,asset_type,first_name,last_name,work_email,' +
-        'employee_id,hiring_date,location,entity,department,title,reports_to')
+        'employee_id,hiring_date,location,entity,department,title,reports_to'),
+      supabase.from('assets').select('id', { count: 'exact', head: true })
+        .is('deleted_at', null)
+        .neq('status', 'retired').neq('status', 'released').neq('status', 'returned_to_lessor')
     ]);
 
     const joiners = {};
@@ -158,7 +161,8 @@ function Shell() {
                  'title','reports_to','asset_type'];
     const gaps = active.filter(e => REQ.some(k => !String(e[k] ?? '').trim()));
 
-    setD({ joinerList, openLeavers, dueLeavers, soon, active, gaps });
+    setD({ joinerList, openLeavers, dueLeavers, soon, active, gaps,
+           deviceCount: assetCount.count ?? null });
   }, []);
 
   useEffect(() => {
@@ -244,20 +248,33 @@ function Shell() {
           <rect width="100%" height="100%" fill="url(#heroTexture)" />
         </svg>
         <div className="hero-inner">
-          <p className="hero-eyebrow">Bayzat Ops</p>
-          <div className="hero-row">
+          <p className="hero-eyebrow reveal r1">Bayzat Ops</p>
+          <div className="hero-row reveal r2">
             <TimeIcon />
             <h1 className="hero-title">
               {greeting()}
               {name ? <span className="hero-name">, {name.charAt(0).toUpperCase() + name.slice(1)}</span> : ''}
             </h1>
           </div>
-          <p className="hero-sub">
+          <p className="hero-sub reveal r3">
             {!d ? 'Checking what needs you…'
               : total === 0
                 ? 'Nothing is waiting on you — every joiner, leaver and licence is up to date.'
                 : `${total} thing${total > 1 ? 's need' : ' needs'} your attention.`}
           </p>
+
+          {d && leaving.length > 0 && (
+            <a className="hero-cta reveal r3" href="/offboarding">Open the leaver checklist</a>
+          )}
+
+          {d && (
+            <div className="hero-stats reveal r4">
+              <div className="hstat"><b>{d.active.length}</b><span>People</span></div>
+              {d.deviceCount !== null && (
+                <div className="hstat"><b>{d.deviceCount}</b><span>Devices</span></div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
