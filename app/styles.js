@@ -5,6 +5,12 @@
  * targets a new class, or adds a property commonCss does not already set
  * on that selector -- nothing here redeclares an existing rule. */
 export const homeCss = `
+@keyframes revealUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){
+  .board-lane{animation:none}
+  .tile{animation:none}
+}
+
 /* a little life on hover, matching the polish already given to the
  * Assets tile -- the numbers on this page are a dashboard, they should
  * feel like one */
@@ -25,50 +31,37 @@ export const homeCss = `
  * The one common side effect of this trick is a possible 1px horizontal
  * scrollbar on some browsers; overflow-x:hidden on .wrap guards against
  * it, scoped to this page only since this rule only exists while Home's
- * own stylesheet is loaded. */
+ * own stylesheet is loaded.
+ *
+ * Kept deliberately tight this time -- one compact band, one row of
+ * content, a quiet static tint rather than an animated multi-stop
+ * gradient or a busy icon texture. Compact was the actual brief. */
 .wrap{overflow-x:hidden}
 .hero{position:relative;width:100vw;left:50%;right:50%;margin-left:-50vw;margin-right:-50vw;
-  border-bottom:1px solid var(--line);overflow:hidden;padding:46px 0 40px;margin-bottom:34px;
-  background:linear-gradient(120deg,var(--accent-soft) 0%,var(--amber-soft) 45%,var(--s4-soft) 100%);
-  background-size:220% 220%;
-  animation:heroGradient 16s ease infinite}
-@keyframes heroGradient{
-  0%{background-position:0% 50%}
-  50%{background-position:100% 50%}
-  100%{background-position:0% 50%}
-}
-@keyframes revealUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-.reveal{animation:revealUp .55s var(--ease) both}
-.reveal.r1{animation-delay:.02s}
-.reveal.r2{animation-delay:.09s}
-.reveal.r3{animation-delay:.17s}
-.reveal.r4{animation-delay:.26s}
-@media(prefers-reduced-motion:reduce){
-  .hero{animation:none}
-  .reveal{animation:none}
-  .board-lane{animation:none}
-  .tile{animation:none}
-}
-.hero-pattern{position:absolute;inset:0;pointer-events:none}
-.hero-inner{max-width:1000px;margin:0 auto;padding:0 24px;position:relative}
-.hero-eyebrow{font:600 11.5px var(--font);letter-spacing:.6px;text-transform:uppercase;
-  color:var(--accent);margin-bottom:10px}
-.hero-title{font-size:42px;font-weight:600;letter-spacing:-1.2px;color:var(--ink);
-  line-height:1.08;margin:0}
+  border-bottom:1px solid var(--line);padding:22px 0;margin-bottom:28px;
+  background:linear-gradient(100deg,var(--accent-soft) 0%,var(--sunk) 70%)}
+.hero-inner{max-width:1000px;margin:0 auto;padding:0 24px}
+.hero-top{display:flex;align-items:center;justify-content:space-between;gap:22px;flex-wrap:wrap}
+.hero-greet{display:flex;align-items:center;gap:12px}
+.hero-title{font-size:22px;font-weight:600;letter-spacing:-.5px;color:var(--ink);
+  line-height:1.25;margin:0}
 .hero-name{color:var(--accent)}
-.hero-row{display:flex;align-items:center;gap:14px}
-.hero-sub{font-size:15px;color:var(--ink2);margin-top:12px;max-width:520px;line-height:1.6}
+.hero-sub{font-size:12.5px;color:var(--ink3);margin-top:2px}
 
-.hero-cta{display:inline-block;margin-top:18px;font:600 13px var(--font);color:#fff;
-  background:var(--accent);padding:10px 20px;border-radius:999px;text-decoration:none;
-  transition:transform .15s var(--ease),filter .15s var(--ease)}
-.hero-cta:hover{transform:translateY(-2px);filter:brightness(1.06)}
+.hero-right{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.hero-cta{font:600 12.5px var(--font);color:#fff;background:var(--accent);
+  padding:8px 16px;border-radius:999px;text-decoration:none;white-space:nowrap;
+  transition:filter .15s var(--ease)}
+.hero-cta:hover{filter:brightness(1.06)}
+.hero-stats{display:flex;gap:20px}
+.hstat{display:flex;flex-direction:column;line-height:1}
+.hstat b{font-size:18px;font-weight:600;color:var(--ink)}
+.hstat span{font-size:10px;color:var(--ink3);margin-top:3px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.3px}
 
-.hero-stats{display:flex;gap:30px;margin-top:24px}
-.hstat{display:flex;flex-direction:column}
-.hstat b{font-size:26px;font-weight:600;color:var(--ink);letter-spacing:-.6px;line-height:1}
-.hstat span{font-size:11px;color:var(--ink3);margin-top:5px;font-weight:600;
-  text-transform:uppercase;letter-spacing:.4px}
+@media(max-width:640px){
+  .hero-top{flex-direction:column;align-items:flex-start}
+}
 
 /* the board -- one card per lane, and only one. The header carries the
  * icon, the title and a live count; the body carries every item that
