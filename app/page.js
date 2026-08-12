@@ -1,283 +1,102 @@
-'use client';
-import { useCallback, useEffect, useState } from 'react';
-import { AuthGate, Bar, Icon, supabase } from './common/shared';
-import { isAdmin, tiles } from './common/tiles';
-import { homeCss } from './styles';
+/* Styles owned by the Home page only. Nothing else uses these.
+ * Loaded from inside page.js itself (Home has no nested layout.js of its
+ * own, unlike the other tiles), after commonCss, so these rules layer on
+ * top of it rather than replacing anything. Every selector below either
+ * targets a new class, or adds a property commonCss does not already set
+ * on that selector -- nothing here redeclares an existing rule. */
+export const homeCss = `
+/* a little life on hover, matching the polish already given to the
+ * Assets tile -- the numbers on this page are a dashboard, they should
+ * feel like one */
+.tile{transition:transform .15s var(--ease), border-color .18s var(--ease)}
+.tile:hover{transform:translateY(-3px)}
+.tile:hover .ico{transform:scale(1.08)}
 
-/* Small inline icons standing in for the plain arrow/exclamation
- * characters the lanes used before. Same drawing technique as Icon() in
- * common/shared.js -- a stroked path, nothing filled, no new dependency. */
-function LaneIcon({ kind }) {
-  const d = kind === 'leaving' ? 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9'
-          : kind === 'joining' ? 'M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4 M10 17l5-5-5-5 M15 12H3'
-          : 'M12 9v4 M12 17h.01 M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z';
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {d.split(' M').map((seg, i) => <path key={i} d={(i ? 'M' : '') + seg} />)}
-    </svg>
-  );
+/* a hero band that breaks out to the full width of the browser, not just
+ * .wrap's own constrained column. The technique: give it the viewport's
+ * full width, then pull it back into position with a negative margin
+ * calculated from that same viewport width. This works regardless of what
+ * .wrap's own max-width or padding happen to be -- it never needs to know.
+ * The one common side effect of this trick is a possible 1px horizontal
+ * scrollbar on some browsers; overflow-x:hidden on .wrap guards against
+ * it, scoped to this page only since this rule only exists while Home's
+ * own stylesheet is loaded. */
+.wrap{overflow-x:hidden}
+.hero{position:relative;width:100vw;left:50%;right:50%;margin-left:-50vw;margin-right:-50vw;
+  background:var(--sunk);border-bottom:1px solid var(--line);overflow:hidden;
+  padding:46px 0 40px;margin-bottom:34px}
+.hero-pattern{position:absolute;inset:0;pointer-events:none}
+.hero-inner{max-width:1000px;margin:0 auto;padding:0 24px;position:relative}
+.hero-eyebrow{font:600 11.5px var(--font);letter-spacing:.6px;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px}
+.hero-title{font-size:42px;font-weight:600;letter-spacing:-1.2px;color:var(--ink);
+  line-height:1.08;margin:0}
+.hero-name{color:var(--accent)}
+.hero-sub{font-size:15px;color:var(--ink2);margin-top:12px;max-width:520px;line-height:1.6}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;margin-top:16px;
+  font:500 12.5px var(--font);color:var(--rose);background:var(--rose-soft);
+  padding:6px 14px;border-radius:999px;text-decoration:none;
+  transition:transform .12s var(--ease)}
+.hero-badge:hover{transform:translateY(-1px)}
+
+/* the board -- one card per lane, and only one. The header carries the
+ * icon, the title and a live count; the body carries every item that
+ * lane has, two shown and the rest revealed in place by the toggle at
+ * the bottom, never repeated somewhere else on the page. */
+.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;
+  max-width:1000px;margin:0 auto 34px;padding:0 24px}
+.board-lane{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  border-top:3px solid var(--line);overflow:hidden;transition:border-color .18s var(--ease)}
+.board-lane:hover{border-color:var(--ink3)}
+.board-lane.rose{border-top-color:var(--rose)}
+.board-lane.olive{border-top-color:var(--s4)}
+.board-lane.amber{border-top-color:var(--amber)}
+
+.board-head{display:flex;align-items:center;gap:12px;padding:16px 18px;text-decoration:none;
+  border-bottom:1px solid var(--line2)}
+.board-head:hover{background:var(--sunk)}
+.board-ico{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;flex:none}
+.board-ico svg{display:block}
+.board-lane.rose .board-ico{background:var(--rose-soft);color:var(--rose)}
+.board-lane.olive .board-ico{background:var(--s4-soft);color:var(--s4)}
+.board-lane.amber .board-ico{background:var(--amber-soft);color:var(--amber)}
+.board-title{flex:1;min-width:0;font:600 14.5px var(--font);color:var(--ink);display:grid;gap:2px}
+.board-blurb{font:400 11.5px var(--font);color:var(--ink3);font-weight:400}
+.board-count{font:600 13px var(--font);color:var(--ink3);background:var(--line2);
+  border-radius:999px;min-width:24px;height:24px;padding:0 8px;display:grid;place-items:center;
+  flex:none}
+.board-count.hot{background:var(--rose);color:#fff}
+
+.board-empty{padding:22px 18px;font-size:12.5px;color:var(--ink3);text-align:center}
+.board-list{display:grid}
+.board-item{display:grid;gap:2px;padding:12px 18px;border-bottom:1px solid var(--line2);
+  text-decoration:none;transition:background .12s var(--ease)}
+.board-item:last-child{border-bottom:0}
+.board-item:hover{background:var(--sunk)}
+.board-when{font:600 11px var(--font);color:var(--ink3)}
+.board-item.urgent .board-when{color:var(--rose)}
+.board-who{display:flex;align-items:center;gap:8px;margin-top:2px}
+.board-avatar{width:22px;height:22px;border-radius:50%;background:var(--line2);
+  color:var(--ink2);display:grid;place-items:center;font:600 9.5px var(--font);flex:none}
+.board-doc-ico{width:22px;height:22px;border-radius:50%;background:var(--line2);
+  color:var(--ink2);display:grid;place-items:center;flex:none}
+.board-name{font:600 14px var(--font);color:var(--ink)}
+.board-why{font:400 12px var(--font);color:var(--ink3);margin-left:30px}
+
+.board-toggle{display:block;width:100%;text-align:left;padding:11px 18px;
+  font:500 12.5px var(--font);color:var(--ink2);background:var(--sunk);border:0;
+  border-top:1px solid var(--line2);cursor:pointer;transition:color .12s var(--ease)}
+.board-toggle:hover{color:var(--ink)}
+
+/* a small heading gives the tile grid its own second act, rather than
+ * letting the hero trail straight into a wall of cards */
+.section-head{display:flex;align-items:baseline;gap:10px;margin:0 0 16px}
+.section-head h3{font-size:15px;font-weight:600;color:var(--ink);margin:0}
+.section-head span{font-size:12.5px;color:var(--ink3)}
+
+@media(max-width:640px){
+  .hero{padding:34px 0 30px}
+  .hero-title{font-size:30px}
+  .board{grid-template-columns:1fr}
 }
-
-function nameInitials(name) {
-  const parts = String(name || '').trim().split(/\s+/);
-  return (((parts[0] || '?')[0] || '') + ((parts[1] || '')[0] || '')).toUpperCase();
-}
-
-/* One place per lane, not two. This replaces what used to be a compact
- * "rail" summary above a separate, more complete lane list below -- with
- * only a couple of people in a lane, those two sections showed the same
- * thing twice, styled two different ways. Now there is exactly one card
- * per lane, carrying everything: a real icon and count in the header,
- * every item in the body, and a press-to-expand for anything past the
- * first two rather than a link elsewhere that repeats the same names. */
-function BoardLane({ tone, kind, title, blurb, href, items, person }) {
-  const [open, setOpen] = useState(false);
-  const urgent = items.filter(i => i.urgent).length;
-  const shown = open ? items : items.slice(0, 2);
-  const rest = items.length - shown.length;
-
-  return (
-    <div className={'board-lane ' + tone}>
-      <a className="board-head" href={href}>
-        <span className="board-ico"><LaneIcon kind={kind} /></span>
-        <span className="board-title">
-          {title}
-          <span className="board-blurb">{blurb}</span>
-        </span>
-        <span className={'board-count' + (urgent ? ' hot' : '')}>{items.length}</span>
-      </a>
-
-      {items.length === 0 ? (
-        <p className="board-empty">Nothing outstanding</p>
-      ) : (
-        <div className="board-list">
-          {shown.map((it, i) => (
-            <a key={i} className={'board-item' + (it.urgent ? ' urgent' : '')} href={href}>
-              <span className="board-when">{it.when}</span>
-              <span className="board-who">
-                {person
-                  ? <span className="board-avatar">{nameInitials(it.name)}</span>
-                  : <span className="board-doc-ico"><Icon name="documents" size={13} /></span>}
-                <span className="board-name">{it.name}</span>
-              </span>
-              <span className="board-why">{it.why}</span>
-            </a>
-          ))}
-          {items.length > 2 && (
-            <button className="board-toggle" onClick={() => setOpen(o => !o)}>
-              {open ? 'Show less' : `+${rest} more`}
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function OpsBoard({ leaving, joining, expiring }) {
-  return (
-    <div className="board">
-      <BoardLane tone="rose" kind="leaving" title="Leaving" href="/offboarding"
-        blurb="Collect the device, close their access" items={leaving} person />
-      <BoardLane tone="olive" kind="joining" title="Joining" href="/onboarding"
-        blurb="Set them up before they start" items={joining} person />
-      <BoardLane tone="amber" kind="expiring" title="Expiring" href="/documents"
-        blurb="Licences and cards due for renewal" items={expiring} />
-    </div>
-  );
-}
-
-/** One kind of work. Empty lanes still show, so the shape of the day is the
- *  same every morning and a glance tells you which side is busy. */
-export default function Home() {
-  return <AuthGate><Shell /></AuthGate>;
-}
-
-/** Today, in the browser's own timezone. */
-const today = () => {
-  const d = new Date();
-  const p = n => String(n).padStart(2, '0');
-  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
-};
-const days = (iso) => iso
-  ? Math.round((new Date(today() + 'T00:00:00')
-      - new Date(String(iso).slice(0, 10) + 'T00:00:00')) / 864e5) : null;
-
-function greeting() {
-  const h = new Date().getHours();
-  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-}
-
-function Shell() {
-  const [email, setEmail] = useState('');
-  const [d, setD] = useState(null);
-
-  const load = useCallback(async () => {
-    const [pending, leavers, docs, emp] = await Promise.all([
-      supabase.from('v_pending_steps').select('ref,days_open,name,label'),
-      supabase.from('leavers').select('id,ref,first_name,last_name,status,last_working_day'),
-      supabase.from('company_documents').select('id,title,expiry_date,status'),
-      supabase.from('employees').select('id,status,asset_type,first_name,last_name,work_email,' +
-        'employee_id,hiring_date,location,entity,department,title,reports_to')
-    ]);
-
-    const joiners = {};
-    (pending.data || []).forEach(r => {
-      joiners[r.ref] = joiners[r.ref] || { name: r.name, days: r.days_open, steps: 0 };
-      joiners[r.ref].steps++;
-    });
-    const joinerList = Object.entries(joiners).map(([ref, v]) => ({ ref, ...v }))
-      .sort((a, b) => b.days - a.days);
-
-    const openLeavers = (leavers.data || []).filter(l => l.status === 'pending');
-    const dueLeavers = openLeavers.filter(l => days(l.last_working_day) >= 0);
-
-    // anything expiring within a month, or already past it
-    const soon = (docs.data || [])
-      .filter(x => x.status === 'active' && x.expiry_date)
-      .filter(x => -days(x.expiry_date) <= 30);
-
-    const active = (emp.data || []).filter(e => e.status === 'active');
-    const REQ = ['work_email','employee_id','hiring_date','location','entity','department',
-                 'title','reports_to','asset_type'];
-    const gaps = active.filter(e => REQ.some(k => !String(e[k] ?? '').trim()));
-
-    setD({ joinerList, openLeavers, dueLeavers, soon, active, gaps });
-  }, []);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email || ''));
-    load();
-  }, [load]);
-
-  const visible = tiles.filter(t => !t.adminOnly || isAdmin(email));
-  const name = (email || '').split('@')[0].split('.')[0];
-
-  /* Leaving and joining are opposite jobs, so they are not mixed into one
-     list. Within each, the longest-waiting comes first. */
-  const leaving = [], joining = [], expiring = [];
-  if (d) {
-    d.dueLeavers.forEach(l => {
-      const n = days(l.last_working_day);
-      leaving.push({
-        name: `${l.first_name} ${l.last_name}`,
-        when: n === 0 ? 'Last day is today' : `Left ${n} day${n > 1 ? 's' : ''} ago`,
-        why: n === 0
-          ? 'Collect the device and close their access before the end of the day'
-          : 'The checklist is still open',
-        urgent: n > 0, sort: n
-      });
-    });
-    d.joinerList.forEach(j => joining.push({
-      name: j.name,
-      when: j.days === 0 ? 'Starts today'
-        : j.days < 0 ? `Starts in ${-j.days} days`
-        : `Started ${j.days} day${j.days > 1 ? 's' : ''} ago`,
-      why: `${j.steps} step${j.steps > 1 ? 's' : ''} still to do`,
-      urgent: j.days >= 7, sort: j.days
-    }));
-    d.soon.forEach(x => {
-      const n = -days(x.expiry_date);
-      expiring.push({
-        name: x.title,
-        when: n < 0 ? `Expired ${-n} days ago` : n === 0 ? 'Expires today' : `Expires in ${n} days`,
-        why: 'Needs renewing',
-        urgent: n <= 7, sort: -n
-      });
-    });
-  }
-  leaving.sort((a, b) => b.sort - a.sort);
-  joining.sort((a, b) => b.sort - a.sort);
-  expiring.sort((a, b) => b.sort - a.sort);
-  const total = leaving.length + joining.length + expiring.length;
-
-  return (
-    <div className="wrap">
-      <style dangerouslySetInnerHTML={{ __html: homeCss }} />
-      <Bar
-        title="Bayzat Ops"
-        sub="Internal tools for the IT and People teams"
-        right={<>{email}<button className="mini" onClick={() => supabase.auth.signOut()}>
-          Sign out</button></>}
-      />
-
-      <div className="hero">
-        <svg className="hero-pattern" width="100%" height="100%" aria-hidden="true">
-          <defs>
-            <pattern id="heroDots" width="22" height="22" patternUnits="userSpaceOnUse">
-              <circle cx="2" cy="2" r="1.4" style={{ fill: 'var(--accent)' }} opacity="0.12" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#heroDots)" />
-        </svg>
-        <div className="hero-inner">
-          <p className="hero-eyebrow">Bayzat Ops</p>
-          <h1 className="hero-title">
-            {greeting()}
-            {name ? <span className="hero-name">, {name.charAt(0).toUpperCase() + name.slice(1)}</span> : ''}
-          </h1>
-          <p className="hero-sub">
-            {!d ? 'Checking what needs you…'
-              : total === 0
-                ? 'Nothing is waiting on you — every joiner, leaver and licence is up to date.'
-                : `${total} thing${total > 1 ? 's need' : ' needs'} your attention.`}
-          </p>
-          {d && d.gaps.length > 0 && (
-            <a className="hero-badge" href="/employees">
-              {d.gaps.length} record{d.gaps.length > 1 ? 's' : ''} need attention
-            </a>
-          )}
-        </div>
-      </div>
-
-      {d && <OpsBoard leaving={leaving} joining={joining} expiring={expiring} />}
-
-      <div className="section-head">
-        <h3>Everything you can do</h3>
-        <span>{visible.length} tiles</span>
-      </div>
-      <div className="tiles">
-        {visible.map(t => {
-          // a plain `length && text` returns 0 when the count is zero, and
-          // React renders that 0 on the page — hence the stray zeroes
-          const n = d ? {
-            onboarding: d.joinerList.length,
-            offboarding: d.openLeavers.length,
-            employees: d.gaps.length,
-            documents: d.soon.length
-          }[t.slug] : null;
-          const label = {
-            onboarding: 'pending', offboarding: 'in progress',
-            employees: 'need attention', documents: 'expiring'
-          }[t.slug];
-          const counts = n ? `${n} ${label}` : null;
-          const urgent = d ? ({
-            offboarding: d.dueLeavers.length,
-            documents: d.soon.filter(x => -days(x.expiry_date) <= 7).length,
-            onboarding: d.joinerList.filter(j => j.days >= 7).length
-          }[t.slug] || 0) : 0;
-
-          const inner = (
-            <>
-              <div className={'ico' + (t.tone ? ' ' + t.tone : '')}><Icon name={t.icon} /></div>
-              <h2>{t.name}</h2>
-              <p>{t.blurb}</p>
-              <div className="badges">
-                {urgent > 0 && <span className="chip red">{urgent} urgent</span>}
-                {counts && <span className="chip grey">{counts}</span>}
-                {t.slug === 'sources' && <span className="chip green">Only you</span>}
-                {!t.live && <span className="chip grey">Coming later</span>}
-                {d && t.live && !counts && !urgent && t.slug !== 'sources' &&
-                  n !== null && <span className="chip green">All clear</span>}
-              </div>
-            </>
-          );
-          return t.live
-            ? <a key={t.slug} className="tile" href={t.href}>{inner}</a>
-            : <div key={t.slug} className="tile soon">{inner}</div>;
-        })}
-      </div>
-    </div>
-  );
-}
+`;
