@@ -96,9 +96,14 @@ export const homeCss = `
   border-radius:999px;min-width:24px;height:24px;padding:0 8px;display:grid;place-items:center;
   flex:none}
 .board-count.hot{background:var(--rose);color:#fff}
-.board-upcoming{display:block;font:400 11.5px var(--font);color:var(--ink3);
-  text-decoration:none;padding:9px 18px;border-bottom:1px solid var(--line2)}
-.board-upcoming:hover{color:var(--ink2);background:var(--sunk)}
+.board-upcoming{display:flex;align-items:baseline;gap:9px;padding:14px 18px;
+  text-decoration:none;border-bottom:1px solid var(--line2);transition:background .12s var(--ease)}
+.board-upcoming:hover{background:var(--sunk)}
+.board-upcoming b{font-size:26px;font-weight:600;letter-spacing:-.5px;line-height:1}
+.board-lane.rose .board-upcoming b{color:var(--rose)}
+.board-lane.olive .board-upcoming b{color:var(--s4)}
+.board-lane.amber .board-upcoming b{color:var(--amber)}
+.board-upcoming span{font-size:12.5px;color:var(--ink3)}
 
 .board-empty{padding:22px 18px;font-size:12.5px;color:var(--ink3);text-align:center}
 .board-list{display:grid}
