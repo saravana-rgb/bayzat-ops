@@ -50,7 +50,8 @@ function BoardLane({ tone, kind, title, blurb, href, items, person, upcoming }) 
 
       {!!upcoming && (
         <a className="board-upcoming" href={href}>
-          {upcoming} more coming up, not due yet
+          <b>{upcoming}</b>
+          <span>coming up, not due yet</span>
         </a>
       )}
 
