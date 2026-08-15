@@ -96,6 +96,9 @@ export const homeCss = `
   border-radius:999px;min-width:24px;height:24px;padding:0 8px;display:grid;place-items:center;
   flex:none}
 .board-count.hot{background:var(--rose);color:#fff}
+.board-upcoming{display:block;font:400 11.5px var(--font);color:var(--ink3);
+  text-decoration:none;padding:9px 18px;border-bottom:1px solid var(--line2)}
+.board-upcoming:hover{color:var(--ink2);background:var(--sunk)}
 
 .board-empty{padding:22px 18px;font-size:12.5px;color:var(--ink3);text-align:center}
 .board-list{display:grid}
