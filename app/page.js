@@ -31,7 +31,7 @@ function nameInitials(name) {
  * per lane, carrying everything: a real icon and count in the header,
  * every item in the body, and a press-to-expand for anything past the
  * first two rather than a link elsewhere that repeats the same names. */
-function BoardLane({ tone, kind, title, blurb, href, items, person }) {
+function BoardLane({ tone, kind, title, blurb, href, items, person, upcoming }) {
   const [open, setOpen] = useState(false);
   const urgent = items.filter(i => i.urgent).length;
   const shown = open ? items : items.slice(0, 2);
@@ -47,6 +47,12 @@ function BoardLane({ tone, kind, title, blurb, href, items, person }) {
         </span>
         <span className={'board-count' + (urgent ? ' hot' : '')}>{items.length}</span>
       </a>
+
+      {!!upcoming && (
+        <a className="board-upcoming" href={href}>
+          {upcoming} more coming up, not due yet
+        </a>
+      )}
 
       {items.length === 0 ? (
         <p className="board-empty">Nothing outstanding</p>
@@ -75,11 +81,12 @@ function BoardLane({ tone, kind, title, blurb, href, items, person }) {
   );
 }
 
-function OpsBoard({ leaving, joining, expiring }) {
+function OpsBoard({ leaving, joining, expiring, upcomingLeaving }) {
   return (
     <div className="board">
       <BoardLane tone="rose" kind="leaving" title="Leaving" href="/offboarding"
-        blurb="Collect the device, close their access" items={leaving} person />
+        blurb="Collect the device, close their access" items={leaving} person
+        upcoming={upcomingLeaving} />
       <BoardLane tone="olive" kind="joining" title="Joining" href="/onboarding"
         blurb="Set them up before they start" items={joining} person />
       <BoardLane tone="amber" kind="expiring" title="Expiring" href="/documents"
@@ -258,7 +265,8 @@ function Shell() {
       </div>
 
 
-      {d && <OpsBoard leaving={leaving} joining={joining} expiring={expiring} />}
+      {d && <OpsBoard leaving={leaving} joining={joining} expiring={expiring}
+        upcomingLeaving={d.openLeavers.length - d.dueLeavers.length} />}
 
       <div className="section-head">
         <h3>Everything you can do</h3>
